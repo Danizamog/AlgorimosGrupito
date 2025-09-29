@@ -1,3 +1,0 @@
-# AlgorimosGrupito
-mucho abuso
-:)
