@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grafo análisis de algoritmos</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="title">GRAFOS-ANALISIS DE ALGORITMOS</div>
+    <!-- Top Navigation Tabs -->
+    <div class="topbar">
+        <div class="tabs">
+            <button id="clearGraph" class="tab-btn" title="Limpiar todo el grafo">🧹 Limpiar Grafo</button>
+            <button id="generateMatrix" class="tab-btn" title="Ver/editar la matriz de adyacencia">🔢 Matriz</button>
+            <button id="saveGraph" class="tab-btn" title="Exportar el grafo a JSON">💾 Exportar</button>
+            <button id="loadGraph" class="tab-btn" title="Importar un grafo desde JSON">📂 Importar</button>
+            <button id="openHelp" class="tab-btn" title="Ver ayuda">📘 Ayuda</button>
+            <!-- Analysis dropdown: Johnson and Assignment (Max/Min) -->
+            <div class="dropdown analysis">
+                <button class="dropdown-toggle tab-btn critical" id="analysisDropdown">⚡ Análisis ▾</button>
+                <div class="dropdown-menu" id="analysisMenu">
+                    <button class="dropdown-item" id="analysisJohnson">Maximizar/Minimizar (Johnson)</button>
+                    <div class="dropdown-item has-submenu" id="assignmentSub">
+                        Asignación ▸
+                        <div class="dropdown-menu submenu" id="assignmentMenu">
+                            <button class="dropdown-item" id="assignMaxBtn">Maximizar</button>
+                            <button class="dropdown-item" id="assignMinBtn">Minimizar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="right-controls">
+            <!-- Dropdown de colores -->
+            <div class="dropdown">
+                <button class="dropdown-toggle" id="colorsDropdown">🎨 Colores ▾</button>
+                <div class="dropdown-menu" id="colorsMenu">
+                    <div class="dropdown-row">
+                        <label class="dropdown-label" for="nodeColor">Color de nodos</label>
+                        <input type="color" id="nodeColor" value="#00f7ff" />
+                    </div>
+                    <div class="dropdown-row">
+                        <label class="dropdown-label" for="edgeColor">Color de conexiones</label>
+                        <input type="color" id="edgeColor" value="#00f7ff" />
+                    </div>
+                </div>
+            </div>
+            <!-- Dropdown de tipo de arista -->
+            <div class="dropdown">
+                <button class="dropdown-toggle" id="edgeTypeDropdown">Arista: <span id="edgeTypeLabel">Dirigida</span> ▾</button>
+                <div class="dropdown-menu" id="edgeTypeMenu">
+                    <button class="dropdown-item edge-type-option" data-value="directed">Dirigida</button>
+                    <button class="dropdown-item edge-type-option" data-value="undirected">No Dirigida</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div id="canvas">
+            <div class="grid"></div>
+            <svg class="svg-container" width="100%" height="100%">
+                <defs>
+                    <marker id="arrowhead" class="arrow-marker" markerWidth="15" markerHeight="10" refX="14" refY="5" orient="auto"><polygon points="0 0,15 5,0 10" fill="var(--primary)"/></marker>
+                    <marker id="arrowtail" class="arrow-marker" markerWidth="15" markerHeight="10" refX="1" refY="5" orient="auto"><polygon points="15 0,0 5,15 10" fill="var(--primary)"/></marker>
+                </defs>
+            </svg>
+        </div>
+        <!-- Sidebar eliminado; mantenemos select oculto fuera de la vista para compatibilidad si fuera necesario -->
+        <div class="hidden"><select id="edgeType" aria-label="Tipo de arista"><option value="directed">Dirigida</option><option value="undirected">No Dirigida</option></select></div>
+    </div>
+    <div class="help-modal" id="helpModal">
+        <div class="help-content">
+            <div class="help-header"><div class="help-title">📘 Ayuda del Editor de Grafos</div><button class="help-close" id="closeHelp">&times;</button></div>
+            <div class="help-body">
+                <div class="help-section">
+                    <h3>🎯 Introducción</h3>
+                    <p>Este editor de grafos te permite crear, visualizar y analizar grafos dirigidos y no dirigidos. Puedes aplicar algoritmos de optimización como Johnson para encontrar rutas maximizadas y minimizadas.</p>
+                </div>
+                
+                <div class="help-section">
+                    <h3>🖱️ Interacción Básica</h3>
+                    <div class="help-subsection">
+                        <h4>Crear y Mover Nodos</h4>
+                        <ul>
+                            <li><strong>Clic en el lienzo:</strong> Crea un nuevo nodo</li>
+                            <li><strong>Arrastrar un nodo:</strong> Mueve el nodo a otra posición</li>
+                            <li><strong>Doble clic en un nodo:</strong> Lo selecciona para crear conexión</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="help-subsection">
+                        <h4>Conectar Nodos</h4>
+                        <ul>
+                            <li><strong>Doble clic en dos nodos diferentes:</strong> Crea una arista entre ellos</li>
+                            <li><strong>Menú desplegable "Arista":</strong> Selecciona entre dirigida o no dirigida</li>
+                            <li><strong>Restricciones:</strong> 
+                                <ul>
+                                    <li>No se permiten bucles (conexiones de un nodo a sí mismo)</li>
+                                    <li>No se permiten aristas en ambos sentidos entre los mismos nodos</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="help-subsection">
+                        <h4>Editar Elementos</h4>
+                        <ul>
+                            <li><strong>Doble clic en peso de arista:</strong> Edita el valor del peso</li>
+                            <li><strong>Clic derecho en nodo/arista:</strong> Abre menú contextual con opciones</li>
+                            <li><strong>Matriz de adyacencia:</strong> Edita todos los pesos visualmente</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="help-section">
+                    <h3>⚡ Análisis y Algoritmos</h3>
+                    <div class="help-subsection">
+                        <h4>Maximizar/Minimizar (Johnson)</h4>
+                        <ul>
+                            <li><strong>Propósito:</strong> Encuentra rutas maximizadas (rojas) y minimizadas (verdes)</li>
+                            <li><strong>Resultados:</strong> Muestra métricas ES|LS en cada nodo</li>
+                            <li><strong>Controles:</strong> Panel flotante para mostrar/ocultar rutas</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="help-subsection">
+                        <h4>Algoritmo de Asignación</h4>
+                        <ul>
+                            <li><strong>Maximizar:</strong> Encuentra asignación que maximiza la suma total</li>
+                            <li><strong>Minimizar:</strong> Encuentra asignación que minimiza la suma total</li>
+                            <li><strong>Basado en:</strong> Algoritmo Húngaro para problemas de asignación</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="help-section">
+                    <h3>💾 Gestión de Archivos</h3>
+                    <ul>
+                        <li><strong>Exportar:</strong> Guarda el grafo actual como archivo JSON con nombre personalizado</li>
+                        <li><strong>Importar:</strong> Carga un grafo previamente guardado</li>
+                        <li><strong>Los archivos incluyen:</strong> Nodos, aristas, colores y análisis guardados</li>
+                    </ul>
+                </div>
+                
+                <div class="help-section">
+                    <h3>🎨 Personalización</h3>
+                    <ul>
+                        <li><strong>Colores de nodos:</strong> Personaliza el color de todos los nodos</li>
+                        <li><strong>Colores de aristas:</strong> Personaliza el color de todas las conexiones</li>
+                        <li><strong>Tipos de aristas:</strong> Cambia entre dirigidas y no dirigidas</li>
+                    </ul>
+                </div>
+                
+                <div class="help-section">
+                    <h3>🔧 Funciones Avanzadas</h3>
+                    <ul>
+                        <li><strong>Matriz de Adyacencia:</strong> Vista completa para edición masiva de pesos</li>
+                        <li><strong>Limpieza:</strong> Elimina todo el grafo para empezar desde cero</li>
+                        <li><strong>Visualización:</strong> Grid de fondo para mejor alineación</li>
+                    </ul>
+                </div>
+                
+                <div class="help-section">
+                    <h3>💡 Consejos de Uso</h3>
+                    <ul>
+                        <li>Usa nombres descriptivos para los nodos para mejor organización</li>
+                        <li>Planifica la disposición de nodos antes de crear muchas conexiones</li>
+                        <li>Exporta tu trabajo regularmente para evitar pérdida de datos</li>
+                        <li>Utiliza los controles de visualización para analizar rutas específicas</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="help-footer"><button id="exportPdfBtn" class="help-footer-btn">Exportar Ayuda como PDF</button></div>
+        </div>
+    </div>
+    <!-- Export Modal -->
+    <div class="help-modal" id="exportModal" aria-modal="true" role="dialog" aria-labelledby="exportTitle">
+        <div class="help-content">
+            <div class="help-header">
+                <div class="help-title" id="exportTitle">💾 Exportar Grafo</div>
+                <button class="help-close" id="closeExport">&times;</button>
+            </div>
+            <div class="help-body">
+                <label for="exportFileName" class="modal-label">Nombre del archivo (sin extensión):</label>
+                <input type="text" id="exportFileName" class="modal-input" value="grafo" placeholder="grafo" />
+            </div>
+            <div class="help-footer modal-actions">
+                <button id="exportCancel" class="help-footer-btn btn-cancel">Cancelar</button>
+                <button id="exportConfirm" class="help-footer-btn">Guardar .json</button>
+            </div>
+        </div>
+    </div>
+    <!-- Assignment Modal -->
+    <div class="help-modal" id="assignmentModal" aria-modal="true" role="dialog" aria-labelledby="assignmentTitle">
+        <div class="help-content">
+            <div class="help-header">
+                <div class="help-title" id="assignmentTitle">🧮 Algoritmo de Asignación</div>
+                <button class="help-close" id="closeAssignment">&times;</button>
+            </div>
+            <div class="help-body" id="assignmentBody">
+                <!-- dynamic content injected by JS -->
+            </div>
+            <div class="help-footer modal-actions">
+                <button id="assignmentCloseBtn" class="help-footer-btn">Cerrar</button>
+            </div>
+        </div>
+    </div>
+    <script src="app.js" defer></script>
+</body>
+</html>
