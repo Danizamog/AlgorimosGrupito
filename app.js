@@ -226,53 +226,49 @@ function runAssignment(mode) {
     const { M, E, rowNames, colNames, maxVal } = buildMatrix();
     const n = M.length;
     let C;
-    if (mode==='max') {
-        // Minimización equivalente: maxVal - beneficio
+    if (mode === 'max') {
+        // Maximizar: transformar a minimización
         const base = Math.max(1, maxVal);
         C = M.map(row => row.map(v => base - v));
     } else {
-        // Minimizar costo: si no existe arista, penalizar muy alto para evitar elegirla
+        // Minimizar: penalizar celdas sin arista
         const BIG = (maxVal || 1) * 10 + 1;
-        C = M.map((row,i) => row.map((v,j) => E[i][j] ? v : BIG));
+        C = M.map((row, i) => row.map((v, j) => E[i][j] ? v : BIG));
     }
     const assignment = hungarian(C);
-    // compute total based on original matrix for mode
-    let total = 0; const selected = new Set(); const pairs = [];
-    assignment.forEach(({row,col})=>{ if (col>=0) { total += M[row][col]; selected.add(`${row}-${col}`); } });
-    assignment.forEach(({row,col})=>{
-        if (col>=0) pairs.push({ from: rowNames[row], to: colNames[col], value: M[row][col] });
-    });
-    renderAssignmentModal({ mode, total, M, rowNames, colNames, selected, pairs });
-}
 
-function renderAssignmentModal({ mode, total, M, rowNames, colNames, selected, pairs }) {
-    if (!assignmentBody) return;
-    const n = M.length;
-    const title = mode==='max' ? 'Máxima asignación' : 'Mínimo costo';
-    // grid: first row headers (blank + col names), then each row with name + cells
-    let html = `<div class="assignment-summary">${title}: <span class="assignment-total">${total}</span></div>`;
+    // Calcular total y pares asignados
+    let total = 0;
+    const pairs = [];
+    assignment.forEach(({ row, col }) => {
+        if (col >= 0 && col < colNames.length && row < rowNames.length) {
+            total += M[row][col];
+            pairs.push({ from: rowNames[row], to: colNames[col], value: M[row][col] });
+        }
+    });
+
+    // Mostrar matriz y resultado
+    let html = `<div class="assignment-summary"><b>Resultado de Asignación (${mode === 'max' ? 'Máxima' : 'Mínima'}):</b> <span class="assignment-total">${total}</span></div>`;
     html += `<div class="assignment-grid" style="grid-template-columns: 140px repeat(${n}, 1fr)">`;
     html += `<div></div>`;
-    for (let j=0;j<n;j++) html += `<div class="header">${colNames[j]}</div>`;
-    for (let i=0;i<n;i++) {
+    for (let j = 0; j < n; j++) html += `<div class="header">${colNames[j]}</div>`;
+    for (let i = 0; i < n; i++) {
         html += `<div class="header">${rowNames[i]}</div>`;
-        for (let j=0;j<n;j++) {
-            const key = `${i}-${j}`;
-            const cls = selected.has(key) ? 'assignment-cell selected' : 'assignment-cell';
-            const val = M[i][j];
-            html += `<div class="${cls}">${val}</div>`;
+        for (let j = 0; j < n; j++) {
+            const isAssigned = assignment.some(a => a.row === i && a.col === j);
+            const cls = isAssigned ? 'assignment-cell selected' : 'assignment-cell';
+            html += `<div class="${cls}">${M[i][j]}</div>`;
         }
     }
     html += `</div>`;
-    if (pairs?.length) {
-        html += `<div class="assignment-pairs">` + pairs.map(p=>`<div class="pair"><span class="k">${p.from}</span> → <span class="k">${p.to}</span> <span class="v">(${p.value})</span></div>`).join('') + `</div>`;
+    if (pairs.length) {
+        html += `<div class="assignment-pairs"><b>Pares óptimos:</b>` +
+            pairs.map(p => `<div class="pair"><span class="k">${p.from}</span> → <span class="k">${p.to}</span> <span class="v">(${p.value})</span></div>`).join('') +
+            `</div>`;
     }
     assignmentBody.innerHTML = html;
     openAssignmentModal();
 }
-
-assignMaxBtn?.addEventListener('click', ()=>{ analysisMenu?.classList.remove('show'); runAssignment('max'); });
-assignMinBtn?.addEventListener('click', ()=>{ analysisMenu?.classList.remove('show'); runAssignment('min'); });
 
 /* ===== COLORES ===== */
 document.getElementById('nodeColor').addEventListener('change', e => {
@@ -313,11 +309,7 @@ canvas.addEventListener('dblclick', e => {
         const nodeId = parseInt(e.target.dataset.id);
         if (selectedNode === null) {
             selectedNode = nodeId; e.target.classList.add('selected');
-        } else if (selectedNode === nodeId) {
-            // Eliminado soporte para bucles
-            alert('No se permiten bucles en el grafo.');
-            e.target.classList.remove('selected'); 
-            selectedNode = null;
+        
         } else {
             addEdge(selectedNode, nodeId);
             document.querySelector(`.node[data-id="${selectedNode}"]`).classList.remove('selected'); selectedNode = null;
@@ -325,18 +317,7 @@ canvas.addEventListener('dblclick', e => {
     }
 });
 function addEdge(fromId, toId) {
-    // Verificar que no es un bucle
-    if (fromId === toId) {
-        alert('No se permiten bucles en el grafo.');
-        return;
-    }
-    
-    // Bloquear arista inversa (ida y vuelta)
-    const reverseExists = edges.some(e => e.from === toId && e.to === fromId);
-    if (reverseExists) {
-        alert('No se permite crear aristas en ambos sentidos entre los mismos nodos.');
-        return;
-    }
+    // Eliminar restricción de bucles
     const weight = promptForNonNegativeWeight(`Peso ${fromId}→${toId}:`, '1');
     if (weight === null) return;
     const directed = document.getElementById('edgeType').value === 'directed';
@@ -349,11 +330,52 @@ function drawEdge(edge) {
     const fromNode = nodes.find(n => n.id === edge.from);
     const toNode = nodes.find(n => n.id === edge.to);
     if (!fromNode || !toNode) return;
+
+    let path;
+    if (fromNode.id === toNode.id) {
+        // Dibuja un arco circular para el bucle
+        const r = 32; // radio del bucle
+        const cx = fromNode.x;
+        const cy = fromNode.y;
+        const startAngle = Math.PI / 4;
+        const endAngle = Math.PI * 1.25;
+        const x1 = cx + r * Math.cos(startAngle);
+        const y1 = cy + r * Math.sin(startAngle);
+        const x2 = cx + r * Math.cos(endAngle);
+        const y2 = cy + r * Math.sin(endAngle);
+
+        path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('class', 'edge-path');
+        path.setAttribute('data-id', edge.id);
+        path.setAttribute('data-from', edge.from);
+        path.setAttribute('data-to', edge.to);
+        path.setAttribute('stroke', edgeColor);
+        path.setAttribute('fill', 'none');
+        path.setAttribute(
+            'd',
+            `M ${x1} ${y1} A ${r} ${r} 0 1 1 ${x2} ${y2}`
+        );
+        svg.appendChild(path);
+
+        // Etiqueta del peso en el bucle
+        const label = document.createElement('div');
+        label.className = 'edge-label';
+        label.textContent = edge.weight;
+        label.style.left = `${cx + r + 8}px`;
+        label.style.top = `${cy - r - 8}px`;
+        label.dataset.from = edge.from;
+        label.dataset.to = edge.to;
+        label.addEventListener('dblclick', () => editEdgeWeight(edge.id));
+        canvas.appendChild(label);
+        return;
+    }
+
+    // Aristas normales
     const dx = toNode.x - fromNode.x, dy = toNode.y - fromNode.y, distance = Math.sqrt(dx * dx + dy * dy);
     const offset = Math.min(distance * 0.3, 60), offsetX = -dy * offset / distance, offsetY = dx * offset / distance;
     const cp1x = fromNode.x + dx * 0.3 + offsetX, cp1y = fromNode.y + dy * 0.3 + offsetY;
     const cp2x = toNode.x - dx * 0.3 + offsetX, cp2y = toNode.y - dy * 0.3 + offsetY;
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('class', 'edge-path');
     path.setAttribute('data-id', edge.id);
     path.setAttribute('data-from', edge.from);
@@ -637,15 +659,7 @@ document.getElementById('generateMatrix').addEventListener('click', () => {
                 e.target.value = prev;
                 return;
             }
-            // Evitar arista inversa entre distintos nodos
-            if (from !== to) {
-                const reverseExists = edges.some(el => el.from === to && el.to === from);
-                if (reverseExists && (!edge || (edge.from !== from || edge.to !== to))) {
-                    alert('No se permite crear aristas en ambos sentidos entre los mismos nodos.');
-                    e.target.value = prev;
-                    return;
-                }
-            }
+            
             if (!edge) {
                 const directed = document.getElementById('edgeType').value === 'directed';
                 edge = { id: Date.now(), from, to, weight, directed };
@@ -801,6 +815,26 @@ function updatePathControls() {
 
 /* ===== JOHNSON + RUTA CRÍTICA + RUTA ÓPTIMA ===== */
 function johnsonCriticalPath() {
+    // Validar si hay aristas en ambos sentidos
+    const bidirectional = edges.some(e1 =>
+        edges.some(e2 =>
+            e1.from === e2.to &&
+            e1.to === e2.from &&
+            e1.from !== e1.to
+        )
+    );
+    if (bidirectional) {
+        alert('Para el análisis Johnson, el grafo debe tener solo una dirección entre cada par de nodos.');
+        return;
+    }
+
+    // Validar si hay bucles
+    const hasLoops = edges.some(e => e.from === e.to);
+    if (hasLoops) {
+        alert('Para el análisis Johnson, el grafo no debe tener bucles (aristas de un nodo a sí mismo).');
+        return;
+    }
+
     /* 1. build adjacency list */
     const adj = new Map();
     nodes.forEach(n => adj.set(n.id, []));
@@ -1079,3 +1113,7 @@ function applyOptimalPathHighlight(optimalSet) {
 
 /* ===== ACTIVAR BOTÓN JOHNSON (protegido si no existe) ===== */
 document.getElementById('johnsonBtn')?.addEventListener('click', johnsonCriticalPath);
+
+// Activar botones de asignación máxima y mínima
+document.getElementById('assignMaxBtn')?.addEventListener('click', () => runAssignment('max'));
+document.getElementById('assignMinBtn')?.addEventListener('click', () => runAssignment('min'));
