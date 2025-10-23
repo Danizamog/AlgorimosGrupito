@@ -1498,7 +1498,7 @@ function executeNorthwest() {
     const tipoOpt = document.getElementById('nwTipoOpt').value;
     const { matrizCostos, oferta, demanda } = readTableData();
 
-    // Validar
+    // validar
     if (oferta.some(x => x < 0) || demanda.some(x => x < 0)) {
         alert('Error: Oferta y demanda deben ser valores no negativos');
         return;
@@ -1818,11 +1818,33 @@ function esquinaNoreste(ofertaOriginal, demandaOriginal) {
         oferta[i] -= cantidad;
         demanda[j] -= cantidad;
 
-        if (oferta[i] === 0 && i < m - 1) {
-            i++;
-        } else if (demanda[j] === 0 && j < n - 1) {
-            j++;
+        // Avance de índices según NW (manejo de empates y bordes)
+        if (oferta[i] === 0 && demanda[j] === 0) {
+            if (i < m - 1) {
+                i++;
+            } else if (j < n - 1) {
+                j++;
+            } else {
+                break;
+            }
+        } else if (oferta[i] === 0) {
+            if (i < m - 1) {
+                i++;
+            } else if (j < n - 1) {
+                j++;
+            } else {
+                break;
+            }
+        } else if (demanda[j] === 0) {
+            if (j < n - 1) {
+                j++;
+            } else if (i < m - 1) {
+                i++;
+            } else {
+                break;
+            }
         } else {
+            // Nada se agotó (posible por redondeos)
             break;
         }
     }
