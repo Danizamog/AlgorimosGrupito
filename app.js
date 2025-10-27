@@ -1496,12 +1496,24 @@ function readTableData() {
 
 function executeNorthwest() {
     const tipoOpt = document.getElementById('nwTipoOpt').value;
-    const { matrizCostos, oferta, demanda } = readTableData();
 
-    // validar
+    // Leer datos actuales
+    let { matrizCostos, oferta, demanda } = readTableData();
+
+    // validar básicos
     if (oferta.some(x => x < 0) || demanda.some(x => x < 0)) {
         alert('Error: Oferta y demanda deben ser valores no negativos');
         return;
+    }
+
+    // Balancear visualmente la tabla en el DOM si hay desbalance (agrega fila/columna de 0s)
+    const balanced = balanceNorthwestTable(oferta, demanda);
+    if (balanced) {
+        // Releer datos ya balanceados
+        const data2 = readTableData();
+        matrizCostos = data2.matrizCostos;
+        oferta = data2.oferta;
+        demanda = data2.demanda;
     }
 
     const totalOferta = oferta.reduce((a, b) => a + b, 0);
@@ -1530,6 +1542,80 @@ function executeNorthwest() {
     }
 }
 
+// Balancea la tabla en el DOM agregando fila/columna ficticia con costos 0 cuando oferta != demanda
+function balanceNorthwestTable(oferta, demanda) {
+    const tbody = document.getElementById('nwTableBody');
+    const footerRow = document.getElementById('nwTableFooterRow');
+    const headerRow = document.getElementById('nwTableHeaderRow');
+    const { numOrigenes, numDestinos } = getTableDimensions();
+
+    const totalOferta = oferta.reduce((a,b)=>a+b,0);
+    const totalDemanda = demanda.reduce((a,b)=>a+b,0);
+
+    // No hacer nada si ya está balanceado
+    if (Math.abs(totalOferta - totalDemanda) < 1e-9) return false;
+
+    // Preservar demanda actual antes de reconstruir el footer
+    const demandaActual = [...demanda];
+
+    if (totalOferta > totalDemanda) {
+        // Agregar destino ficticio (nueva COLUMNA) con costos 0 y demanda = diferencia
+        const diff = totalOferta - totalDemanda;
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach(row => {
+            const ofertaCell = row.querySelector('.nw-cell-oferta').parentElement;
+            const newCell = document.createElement('td');
+            newCell.innerHTML = '<input type="number" class="nw-cell-input" value="0" step="0.1">';
+            row.insertBefore(newCell, ofertaCell);
+        });
+
+        // Reconstruir headers de columnas y footer, luego setear DEMANDA de la columna ficticia
+        updateTableHeaders();
+        updateDemandaRow();
+        const demandaInputs = footerRow.querySelectorAll('.nw-cell-demanda');
+        if (demandaInputs.length >= 1) {
+            demandaInputs.forEach((inp, idx) => {
+                if (idx < demandaActual.length) inp.value = demandaActual[idx] ?? 0;
+            });
+            demandaInputs[demandaInputs.length - 1].value = diff; // demanda de la nueva columna (destino ficticio)
+        }
+        // Marcar header visualmente como ficticio
+        const ths = headerRow.querySelectorAll('th');
+        if (ths.length >= 2) {
+            const ficticioHeader = ths[ths.length - 2]; // último origen antes de 'Oferta'
+            ficticioHeader.textContent = `Origen ${numOrigenes + 1} (F)`;
+            ficticioHeader.classList.add('nw-ficticio');
+        }
+        return true;
+    } else {
+        // Agregar origen ficticio (nueva FILA) con costos 0 y oferta = diferencia
+        const diff = totalDemanda - totalOferta;
+        const newRow = document.createElement('tr');
+        newRow.classList.add('nw-ficticio-row');
+        newRow.innerHTML = `<td class=\"nw-row-header\">Destino ${numDestinos + 1} (F)</td>`;
+        for (let j = 0; j < numOrigenes; j++) {
+            newRow.innerHTML += `<td><input type=\"number\" class=\"nw-cell-input\" value=\"0\" step=\"0.1\"></td>`;
+        }
+        newRow.innerHTML += `<td><input type=\"number\" class=\"nw-cell-oferta\" value=\"${diff}\" step=\"0.1\"></td>`;
+        tbody.appendChild(newRow);
+
+        // Reconstruir footer manteniendo los valores de demanda existentes
+        updateDemandaRow();
+        const demandaInputs = footerRow.querySelectorAll('.nw-cell-demanda');
+        demandaInputs.forEach((inp, idx) => { inp.value = demandaActual[idx] ?? 0; });
+
+        // Actualizar headers de filas y marcar la última como ficticia (F)
+        updateTableHeaders();
+        const rowHeaders = tbody.querySelectorAll('.nw-row-header');
+        if (rowHeaders.length) {
+            const hdr = rowHeaders[rowHeaders.length - 1];
+            hdr.textContent = `Destino ${numDestinos + 1} (F)`;
+            hdr.classList.add('nw-ficticio');
+        }
+        return true;
+    }
+}
+
 // ===== IMPORTAR/EXPORTAR =====
 
 function exportToJSON() {
@@ -1545,11 +1631,20 @@ function exportToJSON() {
         fecha: new Date().toISOString()
     };
 
+    // Pedir nombre al usuario
+    const suggested = `northwest_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}`;
+    let filename = prompt('Nombre de archivo (sin extensión):', suggested);
+    if (filename === null) return; // cancelado
+    filename = (filename || '').trim();
+    if (!filename) return;
+    // Asegurar extensión
+    if (!/\.json$/i.test(filename)) filename += '.json';
+
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `northwest_${Date.now()}.json`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
 }
@@ -1575,11 +1670,19 @@ function exportToCSV() {
         csv += `Origen ${i + 1},${val}\n`;
     });
 
+    // Pedir nombre al usuario
+    const suggested = `northwest_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}`;
+    let filename = prompt('Nombre de archivo (sin extensión):', suggested);
+    if (filename === null) return; // cancelado
+    filename = (filename || '').trim();
+    if (!filename) return;
+    if (!/\.csv$/i.test(filename)) filename += '.csv';
+
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `northwest_${Date.now()}.csv`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
 }
@@ -2230,6 +2333,14 @@ function displayNorthwestResultInline(resultado) {
     if (resultado.nodeFicticioAgregado.tipo) {
         html += `<div class="nw-warning">`;
         html += `⚠️ Se agregó un <strong>${resultado.nodeFicticioAgregado.tipo} ficticio</strong> con cantidad ${resultado.nodeFicticioAgregado.cantidad.toFixed(2)} para balancear oferta y demanda.`;
+        html += `</div>`;
+    }
+
+    // Mostrar matriz de costos utilizada (para visualizar fila/columna ficticia con 0s)
+    if (resultado.matrizCostos && Array.isArray(resultado.matrizCostos) && resultado.matrizCostos.length > 0) {
+        html += `<div class="nw-matrix-section">`;
+        html += `<h5>Matriz de Costos utilizada</h5>`;
+        html += generarTablaMatriz(resultado.matrizCostos, 'costos', resultado);
         html += `</div>`;
     }
 
