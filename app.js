@@ -1816,7 +1816,12 @@ function northwestAlgorithm(tipoOptimizacion, matrizCostos, ofertaOriginal, dema
         nodeFicticioAgregado: nodeFicticio,
         dimensiones: { m: mFinal, n: nFinal },
         matrizCostos: costos,
-        tipoOptimizacion: tipoOptimizacion
+        tipoOptimizacion: tipoOptimizacion,
+        // Exponer oferta/demanda originales y las utilizadas tras balanceo
+        ofertaOriginal: [...ofertaOriginal],
+        demandaOriginal: [...demandaOriginal],
+        ofertaFinal: [...oferta],
+        demandaFinal: [...demanda]
     };
 }
 
@@ -2422,15 +2427,21 @@ function generarTablaMatriz(matriz, tipo, resultado) {
     const m = matriz.length;
     const n = matriz[0].length;
     const isFicticio = resultado.nodeFicticioAgregado.tipo !== null;
+    // Intentamos obtener oferta/demanda (post-balance) desde resultado
+    const oferta = (resultado && Array.isArray(resultado.ofertaFinal)) ? resultado.ofertaFinal : (resultado && Array.isArray(resultado.ofertaOriginal) ? resultado.ofertaOriginal : new Array(m).fill(0));
+    const demanda = (resultado && Array.isArray(resultado.demandaFinal)) ? resultado.demandaFinal : (resultado && Array.isArray(resultado.demandaOriginal) ? resultado.demandaOriginal : new Array(n).fill(0));
 
     let html = '<table class="nw-result-table">';
+    // Cabecera: Destinos + columna de Oferta
     html += '<tr><th></th>';
     for (let j = 0; j < n; j++) {
         const esFicticioCol = isFicticio && resultado.nodeFicticioAgregado.tipo === 'destino' && j === n - 1;
         html += `<th class="${esFicticioCol ? 'nw-ficticio' : ''}">Destino ${j + 1}${esFicticioCol ? ' (F)' : ''}</th>`;
     }
+    html += '<th>Oferta</th>';
     html += '</tr>';
 
+    // Filas: Origenes, valores de matriz y oferta al final
     for (let i = 0; i < m; i++) {
         const esFicticioRow = isFicticio && resultado.nodeFicticioAgregado.tipo === 'origen' && i === m - 1;
         html += `<tr><th class="${esFicticioRow ? 'nw-ficticio' : ''}">Origen ${i + 1}${esFicticioRow ? ' (F)' : ''}</th>`;
@@ -2444,8 +2455,21 @@ function generarTablaMatriz(matriz, tipo, resultado) {
             const texto = Math.abs(valor) < 1e-9 ? '0' : valor.toFixed(2);
             html += `<td class="${clase}">${texto}</td>`;
         }
+        // Oferta para esta fila (origen)
+        const ofertaVal = (typeof oferta[i] !== 'undefined') ? oferta[i] : 0;
+        html += `<td><strong>${(Math.abs(ofertaVal) < 1e-9) ? '0' : ofertaVal.toFixed(2)}</strong></td>`;
         html += '</tr>';
     }
+
+    // Fila de Demanda en el pie de tabla
+    html += '<tr><th>Demanda</th>';
+    for (let j = 0; j < n; j++) {
+        const demandaVal = (typeof demanda[j] !== 'undefined') ? demanda[j] : 0;
+        html += `<td><strong>${(Math.abs(demandaVal) < 1e-9) ? '0' : demandaVal.toFixed(2)}</strong></td>`;
+    }
+    html += '<td></td>'; // celda vacía bajo 'Oferta' column
+    html += '</tr>';
+
     html += '</table>';
 
     return html;
