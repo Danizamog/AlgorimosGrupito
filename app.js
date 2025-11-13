@@ -1735,72 +1735,6 @@ function updateDemandaRow() {
     footerRow.innerHTML += '<td class="nw-corner-cell"></td>';
 }
 
-function balanceNorthwestTable(oferta, demanda) {
-    const tbody = document.getElementById('nwTableBody');
-    const footerRow = document.getElementById('nwTableFooterRow');
-    const headerRow = document.getElementById('nwTableHeaderRow');
-    const { numOrigenes, numDestinos } = getTableDimensions();
-
-    const totalOferta = oferta.reduce((a,b)=>a+b,0);
-    const totalDemanda = demanda.reduce((a,b)=>a+b,0);
-
-    // Ya balanceado
-    if (Math.abs(totalOferta - totalDemanda) < 1e-9) return false;
-
-    const demandaActual = [...demanda];
-
-    if (totalOferta > totalDemanda) {
-        // Agregar COLUMNA ficticia (origen extra)
-        const diff = totalOferta - totalDemanda;
-        const rows = tbody.querySelectorAll('tr');
-        rows.forEach(row => {
-            const ofertaCell = row.querySelector('.nw-cell-oferta').parentElement;
-            const td = document.createElement('td');
-            td.innerHTML = '<input type="number" class="nw-cell-input" value="0" step="0.1">';
-            row.insertBefore(td, ofertaCell);
-        });
-
-        updateTableHeaders();
-        updateDemandaRow();
-        const demandaInputs = footerRow.querySelectorAll('.nw-cell-demanda');
-        demandaInputs.forEach((inp, idx) => { if (idx < demandaActual.length) inp.value = demandaActual[idx] ?? 0; });
-        if (demandaInputs.length > demandaActual.length) demandaInputs[demandaInputs.length - 1].value = diff;
-
-        // Marcar header de la nueva columna como ficticio
-        const ths = headerRow.querySelectorAll('th');
-        if (ths.length >= 2) {
-            const fict = ths[ths.length - 2]; // último header de origen antes de 'Oferta'
-            fict.textContent = `Origen ${numOrigenes + 1} (F)`;
-            fict.classList.add('nw-ficticio');
-        }
-        return true;
-    } else {
-        // Agregar FILA ficticia (destino extra)
-        const diff = totalDemanda - totalOferta;
-        const newRow = document.createElement('tr');
-        newRow.classList.add('nw-ficticio-row');
-        newRow.innerHTML = `<td class=\"nw-row-header\">Destino ${numDestinos + 1} (F)</td>`;
-        for (let j = 0; j < numOrigenes; j++) {
-            newRow.innerHTML += `<td><input type=\"number\" class=\"nw-cell-input\" value=\"0\" step=\"0.1\"></td>`;
-        }
-        newRow.innerHTML += `<td><input type=\"number\" class=\"nw-cell-oferta\" value=\"${diff}\" step=\"0.1\"></td>`;
-        tbody.appendChild(newRow);
-
-        updateDemandaRow();
-        const demandaInputs = footerRow.querySelectorAll('.nw-cell-demanda');
-        demandaInputs.forEach((inp, idx) => { inp.value = demandaActual[idx] ?? 0; });
-
-        updateTableHeaders();
-        const rowHeaders = tbody.querySelectorAll('.nw-row-header');
-        if (rowHeaders.length) {
-            const hdr = rowHeaders[rowHeaders.length - 1];
-            hdr.textContent = `Destino ${numDestinos + 1} (F)`;
-            hdr.classList.add('nw-ficticio');
-        }
-        return true;
-    }
-}
-
 function resetTable() {
     if (!confirm('¿Estás seguro de que quieres resetear toda la tabla?')) return;
 
@@ -1858,23 +1792,12 @@ function readTableData() {
 
 function executeNorthwest() {
     const tipoOpt = document.getElementById('nwTipoOpt').value;
+    const { matrizCostos, oferta, demanda } = readTableData();
 
-    // Leer datos actuales
-    let { matrizCostos, oferta, demanda } = readTableData();
-
-    // validar
+    // Validar
     if (oferta.some(x => x < 0) || demanda.some(x => x < 0)) {
         alert('Error: Oferta y demanda deben ser valores no negativos');
         return;
-    }
-
-    // Balancear visualmente en el DOM antes de calcular
-    const changed = balanceNorthwestTable(oferta, demanda);
-    if (changed) {
-        const data2 = readTableData();
-        matrizCostos = data2.matrizCostos;
-        oferta = data2.oferta;
-        demanda = data2.demanda;
     }
 
     const totalOferta = oferta.reduce((a, b) => a + b, 0);
@@ -1890,9 +1813,12 @@ function executeNorthwest() {
         const resultado = northwestAlgorithm(tipoOpt, matrizCostos, oferta, demanda);
         displayNorthwestResultInline(resultado);
 
+        // Scroll automático hacia los resultados
         setTimeout(() => {
             const resultsSection = document.getElementById('nwResultsSection');
-            if (resultsSection) resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            if (resultsSection) {
+                resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
         }, 100);
     } catch (error) {
         alert('Error al ejecutar el algoritmo: ' + error.message);
@@ -2113,6 +2039,9 @@ function northwestAlgorithm(tipoOptimizacion, matrizCostos, ofertaOriginal, dema
         // Calcular multiplicadores
         const { ui, vj } = calcularMultiplicadores(asignacion, costos, mFinal, nFinal);
 
+        // Calcular matriz de evaluación (Cij = ui + vj)
+        const matrizEvaluacion = calcularMatrizEvaluacion(ui, vj, mFinal, nFinal);
+
         // Calcular costos reducidos
         const costosReducidos = calcularCostosReducidos(asignacion, costos, ui, vj, mFinal, nFinal);
 
@@ -2125,6 +2054,8 @@ function northwestAlgorithm(tipoOptimizacion, matrizCostos, ofertaOriginal, dema
             numero: iteracion,
             asignacion: asignacion.map(row => [...row]),
             multiplicadores: { ui: [...ui], vj: [...vj] },
+            matrizEvaluacion: matrizEvaluacion.map(row => [...row]),
+            matrizCostos: costos.map(row => [...row]),
             costosReducidos: costosReducidos.map(row => [...row]),
             costTotal: costTotal,
             esOptimo: esOptimo,
@@ -2279,7 +2210,19 @@ function calcularMultiplicadores(asignacion, costos, m, n) {
     const ui = new Array(m).fill(undefined);
     const vj = new Array(n).fill(undefined);
 
-    ui[0] = 0; // Inicializar U[0] = 0
+    // Buscar el costo mínimo en las celdas básicas para usar como referencia
+    let costoMinimo = Infinity;
+    for (let i = 0; i < m; i++) {
+        for (let j = 0; j < n; j++) {
+            if (asignacion[i][j] >= EPS) {
+                costoMinimo = Math.min(costoMinimo, costos[i][j]);
+            }
+        }
+    }
+
+    // Inicializar ui[0] con el costo mínimo (en lugar de 0)
+    // Esto hace que los multiplicadores sean más intuitivos
+    ui[0] = (costoMinimo !== Infinity && costoMinimo > 0) ? costoMinimo : 0;
 
     let cambios = true;
     let intentos = 0;
@@ -2326,6 +2269,23 @@ function calcularCostosReducidos(asignacion, costos, ui, vj, m, n) {
     }
 
     return costosReducidos;
+}
+
+/**
+ * Calcula la matriz de evaluación Cij = ui + vj para todas las celdas
+ * Esta matriz muestra los valores duales del método MODI
+ * Para variables básicas, Cij debe ser igual al costo original
+ */
+function calcularMatrizEvaluacion(ui, vj, m, n) {
+    const evaluacion = Array.from({ length: m }, () => new Array(n).fill(0));
+
+    for (let i = 0; i < m; i++) {
+        for (let j = 0; j < n; j++) {
+            evaluacion[i][j] = ui[i] + vj[j];
+        }
+    }
+
+    return evaluacion;
 }
 
 function verificarOptimalidad(costosReducidos, asignacion, tipoOptimizacion) {
@@ -2582,16 +2542,36 @@ function displayNorthwestResult(resultado) {
             html += `<div class="nw-matrix-section">`;
             html += `<h5>Multiplicadores</h5>`;
             html += `<div class="nw-multipliers">`;
-            html += `<div><strong>Ui:</strong> [${iter.multiplicadores.ui.map(v => v.toFixed(2)).join(', ')}]</div>`;
-            html += `<div><strong>Vj:</strong> [${iter.multiplicadores.vj.map(v => v.toFixed(2)).join(', ')}]</div>`;
+            html += `<div><strong>Ui (Filas):</strong> [${iter.multiplicadores.ui.map(v => v.toFixed(2)).join(', ')}]</div>`;
+            html += `<div><strong>Vj (Columnas):</strong> [${iter.multiplicadores.vj.map(v => v.toFixed(2)).join(', ')}]</div>`;
             html += `</div>`;
+            html += `<p class="nw-explanation">Los multiplicadores ui y vj se calculan a partir de las variables básicas usando la relación: Cij = ui + vj</p>`;
+            html += `</div>`;
+        }
+
+        // Matriz de costos con básicas resaltadas
+        if (iter.matrizCostos) {
+            html += `<div class="nw-matrix-section">`;
+            html += `<h5>Matriz de Costos Original (Variables Básicas Resaltadas)</h5>`;
+            html += `<p class="nw-explanation">Las celdas resaltadas en cyan son las variables básicas (rutas activas en la solución actual).</p>`;
+            html += generarTablaMatriz(iter.matrizCostos, 'costos-basicas', resultado, iter.asignacion);
+            html += `</div>`;
+        }
+
+        // Matriz de evaluación (si existen multiplicadores)
+        if (iter.matrizEvaluacion) {
+            html += `<div class="nw-matrix-section">`;
+            html += `<h5>Matriz de Evaluación (Cij = ui + vj)</h5>`;
+            html += `<p class="nw-explanation">Valores calculados como ui + vj para cada celda. Para variables básicas (moradas), debe coincidir con el costo original.</p>`;
+            html += generarTablaMatriz(iter.matrizEvaluacion, 'evaluacion', resultado, iter.asignacion);
             html += `</div>`;
         }
 
         // Costos reducidos (si existen)
         if (iter.costosReducidos) {
             html += `<div class="nw-matrix-section">`;
-            html += `<h5>Costos Reducidos</h5>`;
+            html += `<h5>Matriz de Costos Reducidos (Cij - ui - vj)</h5>`;
+            html += `<p class="nw-explanation">Para variables no básicas: diferencia entre el costo original y el valor evaluado. ${resultado.tipoOptimizacion === 'minimizar' ? 'Valores negativos (rojos) indican mejora potencial.' : 'Valores positivos (verdes) indican mejora potencial.'}</p>`;
             html += generarTablaMatriz(iter.costosReducidos, 'reducidos', resultado);
             html += `</div>`;
         }
@@ -2679,16 +2659,36 @@ function displayNorthwestResultInline(resultado) {
             html += `<div class="nw-matrix-section">`;
             html += `<h5>Multiplicadores</h5>`;
             html += `<div class="nw-multipliers">`;
-            html += `<div><strong>Ui:</strong> [${iter.multiplicadores.ui.map(v => v.toFixed(2)).join(', ')}]</div>`;
-            html += `<div><strong>Vj:</strong> [${iter.multiplicadores.vj.map(v => v.toFixed(2)).join(', ')}]</div>`;
+            html += `<div><strong>Ui (Filas):</strong> [${iter.multiplicadores.ui.map(v => v.toFixed(2)).join(', ')}]</div>`;
+            html += `<div><strong>Vj (Columnas):</strong> [${iter.multiplicadores.vj.map(v => v.toFixed(2)).join(', ')}]</div>`;
             html += `</div>`;
+            html += `<p class="nw-explanation">Los multiplicadores ui y vj se calculan a partir de las variables básicas usando la relación: Cij = ui + vj</p>`;
+            html += `</div>`;
+        }
+
+        // Matriz de costos con básicas resaltadas
+        if (iter.matrizCostos) {
+            html += `<div class="nw-matrix-section">`;
+            html += `<h5>Matriz de Costos Original (Variables Básicas Resaltadas)</h5>`;
+            html += `<p class="nw-explanation">Las celdas resaltadas en cyan son las variables básicas (rutas activas en la solución actual).</p>`;
+            html += generarTablaMatriz(iter.matrizCostos, 'costos-basicas', resultado, iter.asignacion);
+            html += `</div>`;
+        }
+
+        // Matriz de evaluación (si existen multiplicadores)
+        if (iter.matrizEvaluacion) {
+            html += `<div class="nw-matrix-section">`;
+            html += `<h5>Matriz de Evaluación (Cij = ui + vj)</h5>`;
+            html += `<p class="nw-explanation">Valores calculados como ui + vj para cada celda. Para variables básicas (moradas), debe coincidir con el costo original.</p>`;
+            html += generarTablaMatriz(iter.matrizEvaluacion, 'evaluacion', resultado, iter.asignacion);
             html += `</div>`;
         }
 
         // Costos reducidos (si existen)
         if (iter.costosReducidos) {
             html += `<div class="nw-matrix-section">`;
-            html += `<h5>Costos Reducidos</h5>`;
+            html += `<h5>Matriz de Costos Reducidos (Cij - ui - vj)</h5>`;
+            html += `<p class="nw-explanation">Para variables no básicas: diferencia entre el costo original y el valor evaluado. ${resultado.tipoOptimizacion === 'minimizar' ? 'Valores negativos (rojos) indican mejora potencial.' : 'Valores positivos (verdes) indican mejora potencial.'}</p>`;
             html += generarTablaMatriz(iter.costosReducidos, 'reducidos', resultado);
             html += `</div>`;
         }
@@ -2719,10 +2719,11 @@ function displayNorthwestResultInline(resultado) {
     });
 }
 
-function generarTablaMatriz(matriz, tipo, resultado) {
+function generarTablaMatriz(matriz, tipo, resultado, asignacion = null) {
     const m = matriz.length;
     const n = matriz[0].length;
     const isFicticio = resultado.nodeFicticioAgregado.tipo !== null;
+    const EPS = 1e-9;
 
     let html = '<table class="nw-result-table">';
     html += '<tr><th></th>';
@@ -2738,11 +2739,26 @@ function generarTablaMatriz(matriz, tipo, resultado) {
         for (let j = 0; j < n; j++) {
             const valor = matriz[i][j];
             let clase = '';
-            if (tipo === 'asignacion' && valor > 0) clase = 'nw-basica';
-            if (tipo === 'reducidos' && valor < -1e-9) clase = 'nw-negativo';
-            if (tipo === 'reducidos' && valor > 1e-9) clase = 'nw-positivo';
 
-            const texto = Math.abs(valor) < 1e-9 ? '0' : valor.toFixed(2);
+            // Lógica de resaltado según el tipo de matriz
+            if (tipo === 'asignacion' && valor > EPS) {
+                clase = 'nw-basica';
+            } else if (tipo === 'reducidos') {
+                if (valor < -EPS) clase = 'nw-negativo';
+                else if (valor > EPS) clase = 'nw-positivo';
+            } else if (tipo === 'evaluacion' && asignacion) {
+                // Resaltar variables básicas en la matriz de evaluación
+                if (asignacion[i][j] > EPS) {
+                    clase = 'nw-basica-evaluacion';
+                }
+            } else if (tipo === 'costos-basicas' && asignacion) {
+                // Resaltar variables básicas en la matriz de costos
+                if (asignacion[i][j] > EPS) {
+                    clase = 'nw-basica';
+                }
+            }
+
+            const texto = Math.abs(valor) < EPS ? '0' : valor.toFixed(2);
             html += `<td class="${clase}">${texto}</td>`;
         }
         html += '</tr>';
