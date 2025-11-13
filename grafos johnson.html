@@ -503,7 +503,10 @@
         <div class="help-content nw-input-modal-large">
             <div class="help-header">
                 <div class="help-title">🚚 Algoritmo NorthWest - Entrada de Datos</div>
-                <button class="help-close" id="closeNorthwestInput">&times;</button>
+                <div class="help-header-buttons">
+                    <button class="help-btn" id="openNorthwestHelp" title="Ver ayuda del algoritmo NorthWest">❓ Ayuda</button>
+                    <button class="help-close" id="closeNorthwestInput">&times;</button>
+                </div>
             </div>
             <div class="help-body">
                 <!-- Sección de Importar/Exportar -->
@@ -611,6 +614,429 @@
             </div>
             <div class="help-footer modal-actions">
                 <button id="northwestCloseBtn" class="help-footer-btn">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NorthWest Help Modal -->
+    <div class="help-modal" id="northwestHelpModal" aria-modal="true" role="dialog">
+        <div class="help-content">
+            <div class="help-header">
+                <div class="help-title">📚 Ayuda - Algoritmo NorthWest (Transporte)</div>
+                <button class="help-close" id="closeNorthwestHelp">&times;</button>
+            </div>
+            <div class="help-tabs">
+                <button class="help-tab active" data-tab="nw-guia">🎯 Guía de Uso</button>
+                <button class="help-tab" data-tab="nw-teoria">📖 Teoría</button>
+                <button class="help-tab" data-tab="nw-ejemplos">💡 Ejemplos</button>
+                <button class="help-tab" data-tab="nw-faq">❓ Preguntas</button>
+            </div>
+            <div class="help-body">
+                <!-- Pestaña: Guía de Uso -->
+                <div class="help-tab-content active" id="tab-nw-guia">
+                    <div class="help-section">
+                        <h3>🚀 ¿Cómo usar el Algoritmo NorthWest?</h3>
+                        <p>Sigue estos pasos para resolver tu problema de transporte:</p>
+
+                        <div class="step-by-step">
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <h4>Abrir el Algoritmo</h4>
+                                    <p>En la barra superior, haz clic en <strong>"⚡ Análisis"</strong> → <strong>"🚚 NorthWest (Transporte)"</strong></p>
+                                </div>
+                            </div>
+
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <h4>Elegir Tipo de Optimización</h4>
+                                    <p>Selecciona qué deseas optimizar:</p>
+                                    <ul>
+                                        <li><strong>Minimizar Costo:</strong> Encuentra la solución con el menor costo total</li>
+                                        <li><strong>Maximizar Beneficio:</strong> Encuentra la solución con el mayor beneficio total</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <h4>Ingresar Datos en la Tabla</h4>
+                                    <p>Completa la tabla con tus datos:</p>
+                                    <ul>
+                                        <li><strong>Celdas centrales:</strong> Costos/beneficios de transportar de origen a destino</li>
+                                        <li><strong>Columna "Oferta":</strong> Cantidad disponible en cada origen</li>
+                                        <li><strong>Fila "Demanda":</strong> Cantidad requerida en cada destino</li>
+                                    </ul>
+                                    <div class="tip">
+                                        <strong>💡 Tip:</strong> Puedes agregar o eliminar filas/columnas con los botones ➕ y ➖
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="step">
+                                <div class="step-number">4</div>
+                                <div class="step-content">
+                                    <h4>Ajustar la Tabla (Opcional)</h4>
+                                    <p>Usa los botones de control:</p>
+                                    <ul>
+                                        <li><strong>➕ Agregar Fila:</strong> Añade un nuevo origen</li>
+                                        <li><strong>➕ Agregar Columna:</strong> Añade un nuevo destino</li>
+                                        <li><strong>➖ Eliminar Fila/Columna:</strong> Elimina el último origen/destino</li>
+                                        <li><strong>🔄 Resetear:</strong> Vuelve a la tabla inicial</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="step">
+                                <div class="step-number">5</div>
+                                <div class="step-content">
+                                    <h4>Importar/Exportar (Opcional)</h4>
+                                    <p>Guarda o carga tus ejercicios:</p>
+                                    <ul>
+                                        <li><strong>📂 Importar:</strong> Carga datos desde archivo JSON o CSV</li>
+                                        <li><strong>💾 Exportar JSON:</strong> Guarda el ejercicio completo</li>
+                                        <li><strong>📄 Exportar CSV:</strong> Guarda solo la tabla de datos</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="step">
+                                <div class="step-number">6</div>
+                                <div class="step-content">
+                                    <h4>Calcular Solución</h4>
+                                    <p>Haz clic en <strong>"🚀 Calcular Solución"</strong> y el algoritmo:</p>
+                                    <ul>
+                                        <li>✅ Balanceará automáticamente oferta y demanda (si es necesario)</li>
+                                        <li>✅ Generará una solución inicial con el método de esquina noroeste</li>
+                                        <li>✅ Optimizará la solución usando el método MODI</li>
+                                        <li>✅ Mostrará todas las iteraciones paso a paso</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="step">
+                                <div class="step-number">7</div>
+                                <div class="step-content">
+                                    <h4>Interpretar Resultados</h4>
+                                    <p>Los resultados mostrarán:</p>
+                                    <ul>
+                                        <li><strong>Costo/Beneficio Óptimo:</strong> El valor final alcanzado</li>
+                                        <li><strong>Iteraciones:</strong> Cada paso del proceso de optimización</li>
+                                        <li><strong>Matriz de Asignación:</strong> Cuánto transportar de cada origen a cada destino</li>
+                                        <li><strong>Multiplicadores Ui y Vj:</strong> Valores calculados por el método MODI</li>
+                                        <li><strong>Costos Reducidos:</strong> Mejoras potenciales en cada iteración</li>
+                                    </ul>
+                                    <div class="tip">
+                                        <strong>💡 Tip:</strong> Usa las pestañas "Inicial", "Iter 1", "Iter 2", etc. para ver cada paso
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pestaña: Teoría -->
+                <div class="help-tab-content" id="tab-nw-teoria">
+                    <div class="help-section">
+                        <h3>📖 ¿Qué es el Problema de Transporte?</h3>
+                        <p>El <strong>Problema de Transporte</strong> es un modelo de programación lineal que busca encontrar la mejor manera de distribuir productos desde varios orígenes (como fábricas o almacenes) hasta varios destinos (como tiendas o clientes), minimizando costos o maximizando beneficios.</p>
+
+                        <div class="theory-box">
+                            <h4>🎯 Objetivo</h4>
+                            <p>Determinar <strong>cuánto transportar de cada origen a cada destino</strong> para satisfacer la demanda al menor costo (o mayor beneficio) posible.</p>
+                        </div>
+
+                        <div class="theory-box">
+                            <h4>📊 Componentes del Problema</h4>
+                            <ul>
+                                <li><strong>Orígenes (m):</strong> Puntos de suministro con capacidad limitada (oferta)</li>
+                                <li><strong>Destinos (n):</strong> Puntos de demanda que requieren productos</li>
+                                <li><strong>Costos/Beneficios (cᵢⱼ):</strong> Valor asociado al transporte de origen i a destino j</li>
+                                <li><strong>Oferta (Sᵢ):</strong> Cantidad disponible en cada origen</li>
+                                <li><strong>Demanda (Dⱼ):</strong> Cantidad requerida en cada destino</li>
+                            </ul>
+                        </div>
+
+                        <h3>🔄 El Método NorthWest (Esquina Noroeste)</h3>
+                        <p>Es un algoritmo de dos fases para resolver el problema de transporte:</p>
+
+                        <div class="phase-box">
+                            <h4>Fase 1: Solución Inicial - Método de Esquina Noroeste</h4>
+                            <p>Genera una solución básica factible inicial siguiendo esta estrategia simple:</p>
+                            <ol>
+                                <li>Comienza en la celda superior izquierda (esquina noroeste)</li>
+                                <li>Asigna el mínimo entre oferta y demanda disponible</li>
+                                <li>Muévete a la derecha si se agotó la demanda de la columna</li>
+                                <li>Muévete hacia abajo si se agotó la oferta de la fila</li>
+                                <li>Repite hasta asignar todo</li>
+                            </ol>
+                            <div class="note">
+                                <strong>📝 Nota:</strong> Esta solución inicial NO es óptima, pero es válida y sirve como punto de partida.
+                            </div>
+                        </div>
+
+                        <div class="phase-box">
+                            <h4>Fase 2: Optimización - Método MODI</h4>
+                            <p><strong>MODI</strong> (Modified Distribution Method) mejora la solución inicial iterativamente:</p>
+                            <ol>
+                                <li><strong>Calcular multiplicadores (Uᵢ y Vⱼ):</strong> Variables duales del problema</li>
+                                <li><strong>Calcular costos reducidos:</strong> Para cada celda no básica: cᵢⱼ - (Uᵢ + Vⱼ)</li>
+                                <li><strong>Verificar optimalidad:</strong>
+                                    <ul>
+                                        <li>Minimización: Si todos los costos reducidos ≥ 0 → ÓPTIMO</li>
+                                        <li>Maximización: Si todos los costos reducidos ≤ 0 → ÓPTIMO</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Si no es óptimo:</strong>
+                                    <ul>
+                                        <li>Encontrar celda de entrada (mejor costo reducido)</li>
+                                        <li>Crear un loop (circuito cerrado)</li>
+                                        <li>Calcular theta (cantidad a transferir)</li>
+                                        <li>Aplicar la transferencia y repetir</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                        </div>
+
+                        <div class="theory-box">
+                            <h4>⚖️ Balanceo del Problema</h4>
+                            <p>Para que el problema tenga solución, la oferta total debe igualar la demanda total.</p>
+                            <p><strong>Si no están balanceados, el algoritmo agrega automáticamente:</strong></p>
+                            <ul>
+                                <li><strong>Destino ficticio:</strong> Si Oferta > Demanda (con costo 0)</li>
+                                <li><strong>Origen ficticio:</strong> Si Demanda > Oferta (con costo 0)</li>
+                            </ul>
+                            <div class="warning">
+                                <strong>⚠️ Importante:</strong> Las asignaciones a nodos ficticios representan capacidad no utilizada o demanda no satisfecha.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pestaña: Ejemplos -->
+                <div class="help-tab-content" id="tab-nw-ejemplos">
+                    <div class="help-section">
+                        <h3>💡 Ejemplos Prácticos</h3>
+
+                        <div class="example-box">
+                            <h4>Ejemplo 1: Distribución de Productos (Minimizar Costos)</h4>
+                            <p><strong>Situación:</strong> Una empresa tiene 2 almacenes y debe abastecer a 3 tiendas. Los costos de transporte (en $) son:</p>
+
+                            <table class="example-table">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>Tienda 1</th>
+                                        <th>Tienda 2</th>
+                                        <th>Tienda 3</th>
+                                        <th>Oferta</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Almacén A</strong></td>
+                                        <td>8</td>
+                                        <td>6</td>
+                                        <td>10</td>
+                                        <td><strong>150</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Almacén B</strong></td>
+                                        <td>9</td>
+                                        <td>12</td>
+                                        <td>13</td>
+                                        <td><strong>175</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Demanda</strong></td>
+                                        <td><strong>80</strong></td>
+                                        <td><strong>115</strong></td>
+                                        <td><strong>130</strong></td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <p><strong>Pasos:</strong></p>
+                            <ol>
+                                <li>Seleccionar "Minimizar Costo"</li>
+                                <li>Configurar tabla con 2 filas (orígenes) y 3 columnas (destinos)</li>
+                                <li>Ingresar costos y cantidades</li>
+                                <li>Calcular solución</li>
+                            </ol>
+
+                            <p><strong>Resultado esperado:</strong> El algoritmo encontrará la distribución óptima minimizando el costo total de transporte.</p>
+                        </div>
+
+                        <div class="example-box">
+                            <h4>Ejemplo 2: Asignación de Recursos (Maximizar Beneficios)</h4>
+                            <p><strong>Situación:</strong> Una empresa de logística tiene 3 camiones y 4 rutas. Los beneficios (en $) por asignar cada camión a cada ruta son:</p>
+
+                            <table class="example-table">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>Ruta 1</th>
+                                        <th>Ruta 2</th>
+                                        <th>Ruta 3</th>
+                                        <th>Ruta 4</th>
+                                        <th>Oferta</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Camión 1</strong></td>
+                                        <td>50</td>
+                                        <td>45</td>
+                                        <td>60</td>
+                                        <td>55</td>
+                                        <td><strong>100</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Camión 2</strong></td>
+                                        <td>48</td>
+                                        <td>52</td>
+                                        <td>49</td>
+                                        <td>58</td>
+                                        <td><strong>120</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Camión 3</strong></td>
+                                        <td>46</td>
+                                        <td>50</td>
+                                        <td>54</td>
+                                        <td>52</td>
+                                        <td><strong>80</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Demanda</strong></td>
+                                        <td><strong>90</strong></td>
+                                        <td><strong>70</strong></td>
+                                        <td><strong>80</strong></td>
+                                        <td><strong>60</strong></td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <p><strong>Pasos:</strong></p>
+                            <ol>
+                                <li>Seleccionar "Maximizar Beneficio"</li>
+                                <li>Configurar tabla con 3 filas y 4 columnas</li>
+                                <li>Ingresar beneficios y capacidades</li>
+                                <li>Calcular solución</li>
+                            </ol>
+
+                            <p><strong>Resultado esperado:</strong> El algoritmo encontrará la asignación óptima maximizando el beneficio total.</p>
+                        </div>
+
+                        <div class="tip-box">
+                            <h4>📌 Consejos para tus Problemas</h4>
+                            <ul>
+                                <li>Verifica que todos los datos sean correctos antes de calcular</li>
+                                <li>Si la oferta y demanda no coinciden, el algoritmo balanceará automáticamente</li>
+                                <li>Revisa cada iteración para entender cómo se optimiza la solución</li>
+                                <li>Exporta tus ejercicios para usarlos después</li>
+                                <li>Los valores en celdas ficticias indican capacidad no utilizada</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pestaña: Preguntas Frecuentes -->
+                <div class="help-tab-content" id="tab-nw-faq">
+                    <div class="help-section">
+                        <h3>❓ Preguntas Frecuentes</h3>
+
+                        <div class="faq-item">
+                            <h4>¿Qué significa "destino ficticio" o "origen ficticio"?</h4>
+                            <p>Cuando la oferta total no iguala la demanda total, el algoritmo agrega un nodo ficticio para balancear el problema:</p>
+                            <ul>
+                                <li><strong>Destino ficticio:</strong> Si hay más oferta que demanda. Representa capacidad no utilizada.</li>
+                                <li><strong>Origen ficticio:</strong> Si hay más demanda que oferta. Representa demanda no satisfecha.</li>
+                            </ul>
+                            <p>Los nodos ficticios tienen costo/beneficio cero y NO afectan el costo/beneficio total.</p>
+                        </div>
+
+                        <div class="faq-item">
+                            <h4>¿Qué son los multiplicadores Ui y Vj?</h4>
+                            <p>Son variables auxiliares del método MODI (también llamadas variables duales). Se calculan a partir de las celdas básicas y sirven para:</p>
+                            <ul>
+                                <li>Evaluar si la solución actual es óptima</li>
+                                <li>Calcular los costos reducidos de las celdas no básicas</li>
+                                <li>Identificar qué celda debe entrar a la solución básica</li>
+                            </ul>
+                        </div>
+
+                        <div class="faq-item">
+                            <h4>¿Qué son los costos reducidos?</h4>
+                            <p>Para cada celda NO básica (con asignación = 0), el costo reducido indica:</p>
+                            <ul>
+                                <li><strong>En minimización:</strong> Cuánto aumentaría el costo si usáramos esa celda</li>
+                                <li><strong>En maximización:</strong> Cuánto aumentaría el beneficio si usáramos esa celda</li>
+                            </ul>
+                            <p><strong>Criterio de optimalidad:</strong></p>
+                            <ul>
+                                <li>Minimización: Todos los costos reducidos ≥ 0 → Solución óptima</li>
+                                <li>Maximización: Todos los costos reducidos ≤ 0 → Solución óptima</li>
+                            </ul>
+                        </div>
+
+                        <div class="faq-item">
+                            <h4>¿Qué significa "Requiere más iteraciones"?</h4>
+                            <p>Esto indica que el algoritmo detectó que la solución NO es óptima (hay costos reducidos que violan la condición de optimalidad), pero no pudo continuar optimizando debido a un problema técnico.</p>
+                            <p><strong>Posibles causas:</strong></p>
+                            <ul>
+                                <li>Problema de degeneración no manejado correctamente</li>
+                                <li>No se pudo crear un loop válido para mejorar la solución</li>
+                            </ul>
+                            <p><strong>Solución:</strong> Refresca la página (Ctrl+Shift+R) y vuelve a intentar.</p>
+                        </div>
+
+                        <div class="faq-item">
+                            <h4>¿Puedo tener costos/beneficios negativos?</h4>
+                            <p>Sí, el algoritmo maneja correctamente valores negativos:</p>
+                            <ul>
+                                <li><strong>Costos negativos:</strong> Representan ingresos o subsidios</li>
+                                <li><strong>Beneficios negativos:</strong> Representan pérdidas o costos</li>
+                            </ul>
+                        </div>
+
+                        <div class="faq-item">
+                            <h4>¿Qué formato deben tener los archivos de importación?</h4>
+                            <p><strong>JSON:</strong> Estructura completa del ejercicio</p>
+                            <pre>{
+  "tipoOptimizacion": "minimizar",
+  "costos": [[5,8,6], [7,9,4]],
+  "oferta": [100, 150],
+  "demanda": [80, 90, 80]
+}</pre>
+                            <p><strong>CSV:</strong> Solo la tabla de costos (primera fila = demandas, última columna = ofertas)</p>
+                            <pre>Destino1,Destino2,Destino3,Oferta
+5,8,6,100
+7,9,4,150
+Demanda,80,90,80</pre>
+                        </div>
+
+                        <div class="faq-item">
+                            <h4>¿Cómo interpreto la matriz de asignación final?</h4>
+                            <p>Cada celda de la matriz de asignación indica <strong>cuántas unidades transportar</strong> desde el origen (fila) al destino (columna).</p>
+                            <p><strong>Ejemplo:</strong> Si en la celda [Almacén A, Tienda 2] aparece 50, significa: "Transportar 50 unidades desde el Almacén A hasta la Tienda 2"</p>
+                            <p>Las celdas con valor 0 indican que no se usa esa ruta.</p>
+                        </div>
+
+                        <div class="faq-item">
+                            <h4>¿El algoritmo siempre encuentra la solución óptima?</h4>
+                            <p>Sí, cuando el algoritmo converge (termina con "✅ Óptimo"), la solución es <strong>matemáticamente óptima</strong> y garantizada.</p>
+                            <p>El método MODI es un algoritmo exacto basado en el método simplex de programación lineal.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="help-footer modal-actions">
+                <button id="closeNorthwestHelpBtn" class="help-footer-btn">Cerrar</button>
             </div>
         </div>
     </div>

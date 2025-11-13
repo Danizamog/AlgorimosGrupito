@@ -1330,6 +1330,53 @@ function closeNorthwestInputModal() { if (northwestInputModal) northwestInputMod
 closeNorthwestInput?.addEventListener('click', closeNorthwestInputModal);
 northwestInputCancelBtn?.addEventListener('click', closeNorthwestInputModal);
 
+// Modal de ayuda NorthWest
+const northwestHelpModal = document.getElementById('northwestHelpModal');
+const openNorthwestHelp = document.getElementById('openNorthwestHelp');
+const closeNorthwestHelp = document.getElementById('closeNorthwestHelp');
+const closeNorthwestHelpBtn = document.getElementById('closeNorthwestHelpBtn');
+
+function openNorthwestHelpModal() {
+    if (northwestHelpModal) {
+        northwestHelpModal.style.display = 'block';
+    }
+}
+
+function closeNorthwestHelpModal() {
+    if (northwestHelpModal) {
+        northwestHelpModal.style.display = 'none';
+    }
+}
+
+openNorthwestHelp?.addEventListener('click', openNorthwestHelpModal);
+closeNorthwestHelp?.addEventListener('click', closeNorthwestHelpModal);
+closeNorthwestHelpBtn?.addEventListener('click', closeNorthwestHelpModal);
+
+// Funcionalidad de pestañas del modal de ayuda NorthWest
+document.querySelectorAll('#northwestHelpModal .help-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+        const targetTab = this.dataset.tab;
+
+        // Remover clase active de todas las pestañas
+        document.querySelectorAll('#northwestHelpModal .help-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('#northwestHelpModal .help-tab-content').forEach(c => c.classList.remove('active'));
+
+        // Activar la pestaña seleccionada
+        this.classList.add('active');
+        const targetContent = document.getElementById(`tab-${targetTab}`);
+        if (targetContent) {
+            targetContent.classList.add('active');
+        }
+    });
+});
+
+// Cerrar modal de ayuda al hacer clic fuera del contenido
+northwestHelpModal?.addEventListener('click', function(e) {
+    if (e.target === northwestHelpModal) {
+        closeNorthwestHelpModal();
+    }
+});
+
 // ===== FUNCIONES PARA TABLA DINÁMICA =====
 
 function getTableDimensions() {
