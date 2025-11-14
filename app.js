@@ -2019,6 +2019,8 @@ function northwestAlgorithm(tipoOptimizacion, matrizCostos, ofertaOriginal, dema
     iteraciones.push({
         numero: 0,
         asignacion: asignacion.map(row => [...row]),
+        oferta: [...oferta],
+        demanda: [...demanda],
         multiplicadores: null,
         costosReducidos: null,
         costTotal: calcularCostoTotal(asignacion, costos),
@@ -2053,6 +2055,8 @@ function northwestAlgorithm(tipoOptimizacion, matrizCostos, ofertaOriginal, dema
         iteraciones.push({
             numero: iteracion,
             asignacion: asignacion.map(row => [...row]),
+            oferta: [...oferta],
+            demanda: [...demanda],
             multiplicadores: { ui: [...ui], vj: [...vj] },
             matrizEvaluacion: matrizEvaluacion.map(row => [...row]),
             matrizCostos: costos.map(row => [...row]),
@@ -2148,13 +2152,11 @@ function esquinaNoreste(ofertaOriginal, demandaOriginal) {
         const ofertaCero = Math.abs(oferta[i]) < EPS;
         const demandaCero = Math.abs(demanda[j]) < EPS;
 
-        // Si ambos quedan a cero, avanzar ambos índices (si es posible)
+        // Si ambos quedan a cero, avanzar ambos índices
         if (ofertaCero && demandaCero) {
-            // Si ambos se vuelven 0, avanzamos ambos si no estamos en el último elemento
-            if (i < m - 1) i++;
-            if (j < n - 1) j++;
-            // Si ninguno puede avanzar (ambos en última posición), terminamos
-            if ((i >= m || j >= n) || (i === m - 1 && j === n - 1)) break;
+            i++;
+            j++;
+            // El while (i < m && j < n) manejará la terminación
         } else if (ofertaCero) {
             if (i < m - 1) i++;
             else break;
@@ -2552,18 +2554,18 @@ function displayNorthwestResult(resultado) {
         // Matriz de costos con básicas resaltadas
         if (iter.matrizCostos) {
             html += `<div class="nw-matrix-section">`;
-            html += `<h5>Matriz de Costos Original (Variables Básicas Resaltadas)</h5>`;
-            html += `<p class="nw-explanation">Las celdas resaltadas en cyan son las variables básicas (rutas activas en la solución actual).</p>`;
+            html += `<h5>Matriz de Costos Resultante (Solo Variables Básicas)</h5>`;
+            html += `<p class="nw-explanation">Esta matriz muestra ÚNICAMENTE los costos conocidos de las rutas activas (variables básicas resaltadas en cyan). Las celdas vacías representan rutas no utilizadas cuyos costos aún no han sido evaluados.</p>`;
             html += generarTablaMatriz(iter.matrizCostos, 'costos-basicas', resultado, iter.asignacion);
             html += `</div>`;
         }
 
-        // Matriz de evaluación (si existen multiplicadores)
-        if (iter.matrizEvaluacion) {
+        // Matriz de evaluación con multiplicadores integrados (si existen multiplicadores)
+        if (iter.matrizEvaluacion && iter.multiplicadores) {
             html += `<div class="nw-matrix-section">`;
             html += `<h5>Matriz de Evaluación (Cij = ui + vj)</h5>`;
-            html += `<p class="nw-explanation">Valores calculados como ui + vj para cada celda. Para variables básicas (moradas), debe coincidir con el costo original.</p>`;
-            html += generarTablaMatriz(iter.matrizEvaluacion, 'evaluacion', resultado, iter.asignacion);
+            html += `<p class="nw-explanation">Ahora CALCULAMOS todos los valores faltantes usando la fórmula Cij = ui + vj. Los multiplicadores ui (última columna) y vj (última fila) permiten estimar los costos de TODAS las rutas, llenando los espacios vacíos de la matriz anterior. Para variables básicas (moradas), este valor calculado debe coincidir exactamente con el costo original conocido.</p>`;
+            html += generarMatrizEvaluacionConMultiplicadores(iter.matrizEvaluacion, iter.multiplicadores.ui, iter.multiplicadores.vj, iter.asignacion, resultado);
             html += `</div>`;
         }
 
@@ -2635,52 +2637,48 @@ function displayNorthwestResultInline(resultado) {
     // Tabs para iteraciones
     html += `<div class="nw-iterations-tabs">`;
     resultado.iteraciones.forEach((iter, idx) => {
-        html += `<button class="nw-tab-btn-inline ${idx === resultado.iteraciones.length - 1 ? 'active' : ''}" data-iteration="${idx}">`;
+        html += `<button class="nw-tab-btn-inline" data-iteration="${idx}">`;
         html += iter.numero === 0 ? 'Inicial' : `Iter ${iter.numero}`;
         html += `</button>`;
     });
+    // Tab adicional para resultado final
+    html += `<button class="nw-tab-btn-inline active" data-iteration="final">📊 Resultado Final</button>`;
     html += `</div>`;
 
     // Contenido de iteraciones
     html += `<div class="nw-iterations-content-inline">`;
     resultado.iteraciones.forEach((iter, idx) => {
-        html += `<div class="nw-iteration-panel-inline ${idx === resultado.iteraciones.length - 1 ? 'active' : ''}" data-iteration="${idx}">`;
+        html += `<div class="nw-iteration-panel-inline" data-iteration="${idx}">`;
         html += `<h4 class="nw-iteration-title">${iter.fase} ${iter.numero > 0 ? `- Iteración ${iter.numero}` : ''}</h4>`;
-        html += `<div class="nw-cost-display">Costo Total: <span class="nw-cost-value">${iter.costTotal.toFixed(2)}</span></div>`;
 
-        // Matriz de asignación
+        // Fórmula del costo detallada
+        if (iter.matrizCostos) {
+            html += generarFormulaCosto(iter.asignacion, iter.matrizCostos);
+        } else {
+            html += `<div class="nw-cost-display">Costo Total: <span class="nw-cost-value">${iter.costTotal.toFixed(2)}</span></div>`;
+        }
+
+        // Matriz de asignación con oferta y demanda
         html += `<div class="nw-matrix-section">`;
         html += `<h5>Matriz de Asignación</h5>`;
-        html += generarTablaMatriz(iter.asignacion, 'asignacion', resultado);
+        html += generarTablaMatriz(iter.asignacion, 'asignacion', resultado, iter.asignacion, {oferta: iter.oferta, demanda: iter.demanda});
         html += `</div>`;
-
-        // Multiplicadores (si existen)
-        if (iter.multiplicadores) {
-            html += `<div class="nw-matrix-section">`;
-            html += `<h5>Multiplicadores</h5>`;
-            html += `<div class="nw-multipliers">`;
-            html += `<div><strong>Ui (Filas):</strong> [${iter.multiplicadores.ui.map(v => v.toFixed(2)).join(', ')}]</div>`;
-            html += `<div><strong>Vj (Columnas):</strong> [${iter.multiplicadores.vj.map(v => v.toFixed(2)).join(', ')}]</div>`;
-            html += `</div>`;
-            html += `<p class="nw-explanation">Los multiplicadores ui y vj se calculan a partir de las variables básicas usando la relación: Cij = ui + vj</p>`;
-            html += `</div>`;
-        }
 
         // Matriz de costos con básicas resaltadas
         if (iter.matrizCostos) {
             html += `<div class="nw-matrix-section">`;
-            html += `<h5>Matriz de Costos Original (Variables Básicas Resaltadas)</h5>`;
-            html += `<p class="nw-explanation">Las celdas resaltadas en cyan son las variables básicas (rutas activas en la solución actual).</p>`;
+            html += `<h5>Matriz de Costos Resultante (Solo Variables Básicas)</h5>`;
+            html += `<p class="nw-explanation">Esta matriz muestra ÚNICAMENTE los costos conocidos de las rutas activas (variables básicas resaltadas en cyan). Las celdas vacías representan rutas no utilizadas cuyos costos aún no han sido evaluados.</p>`;
             html += generarTablaMatriz(iter.matrizCostos, 'costos-basicas', resultado, iter.asignacion);
             html += `</div>`;
         }
 
-        // Matriz de evaluación (si existen multiplicadores)
-        if (iter.matrizEvaluacion) {
+        // Matriz de evaluación con multiplicadores integrados (si existen multiplicadores)
+        if (iter.matrizEvaluacion && iter.multiplicadores) {
             html += `<div class="nw-matrix-section">`;
             html += `<h5>Matriz de Evaluación (Cij = ui + vj)</h5>`;
-            html += `<p class="nw-explanation">Valores calculados como ui + vj para cada celda. Para variables básicas (moradas), debe coincidir con el costo original.</p>`;
-            html += generarTablaMatriz(iter.matrizEvaluacion, 'evaluacion', resultado, iter.asignacion);
+            html += `<p class="nw-explanation">Ahora CALCULAMOS todos los valores faltantes usando la fórmula Cij = ui + vj. Los multiplicadores ui (última columna) y vj (última fila) permiten estimar los costos de TODAS las rutas, llenando los espacios vacíos de la matriz anterior. Para variables básicas (moradas), este valor calculado debe coincidir exactamente con el costo original conocido.</p>`;
+            html += generarMatrizEvaluacionConMultiplicadores(iter.matrizEvaluacion, iter.multiplicadores.ui, iter.multiplicadores.vj, iter.asignacion, resultado);
             html += `</div>`;
         }
 
@@ -2700,6 +2698,43 @@ function displayNorthwestResultInline(resultado) {
 
         html += `</div>`;
     });
+
+    // Panel de Resultado Final
+    const iteracionFinal = resultado.iteraciones[resultado.iteraciones.length - 1];
+    html += `<div class="nw-iteration-panel-inline active" data-iteration="final">`;
+    html += `<h4 class="nw-iteration-title">📊 Resultado Final</h4>`;
+
+    // Costo total destacado
+    html += `<div class="nw-final-cost">`;
+    html += `<div class="nw-final-cost-label">Costo ${resultado.tipoOptimizacion === 'minimizar' ? 'Mínimo' : 'Máximo'}:</div>`;
+    html += `<div class="nw-final-cost-value">${resultado.costoOptimo.toFixed(2)}</div>`;
+    html += `</div>`;
+
+    // Fórmula del costo detallada
+    if (iteracionFinal.matrizCostos) {
+        html += generarFormulaCosto(iteracionFinal.asignacion, iteracionFinal.matrizCostos);
+    }
+
+    // Matriz de asignación final con oferta y demanda
+    html += `<div class="nw-matrix-section">`;
+    html += `<h5>Matriz de Asignación Final</h5>`;
+    html += `<p class="nw-explanation">Esta es la solución ${resultado.solucionOptimal ? 'óptima' : 'encontrada'}. Las celdas resaltadas muestran las cantidades transportadas en cada ruta.</p>`;
+    html += generarTablaMatriz(iteracionFinal.asignacion, 'asignacion', resultado, iteracionFinal.asignacion, {oferta: iteracionFinal.oferta, demanda: iteracionFinal.demanda});
+    html += `</div>`;
+
+    // Información adicional si hay nodo ficticio
+    if (resultado.nodeFicticioAgregado.tipo) {
+        html += `<div class="nw-info-box">`;
+        html += `<strong>ℹ️ Información:</strong> Se agregó un <strong>${resultado.nodeFicticioAgregado.tipo} ficticio</strong> con cantidad <strong>${resultado.nodeFicticioAgregado.cantidad.toFixed(2)}</strong> para balancear el problema.`;
+        html += `</div>`;
+    }
+
+    // Estado final
+    html += `<div class="nw-status optimal">`;
+    html += resultado.solucionOptimal ? '✅ Solución Óptima Alcanzada' : '⚠️ Solución No Óptima';
+    html += `</div>`;
+
+    html += `</div>`;
     html += `</div>`;
 
     html += `</div>`;
@@ -2719,23 +2754,49 @@ function displayNorthwestResultInline(resultado) {
     });
 }
 
-function generarTablaMatriz(matriz, tipo, resultado, asignacion = null) {
+function generarTablaMatriz(matriz, tipo, resultado, asignacion = null, ofertaDemanda = null) {
     const m = matriz.length;
     const n = matriz[0].length;
     const isFicticio = resultado.nodeFicticioAgregado.tipo !== null;
     const EPS = 1e-9;
 
+    // Calcular oferta y demanda desde asignación si no se proporcionan
+    let oferta = null;
+    let demanda = null;
+    if (tipo === 'asignacion' && ofertaDemanda) {
+        oferta = ofertaDemanda.oferta || null;
+        demanda = ofertaDemanda.demanda || null;
+    } else if (tipo === 'asignacion' && asignacion) {
+        // Calcular desde la matriz de asignación
+        oferta = new Array(m).fill(0);
+        demanda = new Array(n).fill(0);
+        for (let i = 0; i < m; i++) {
+            for (let j = 0; j < n; j++) {
+                oferta[i] += asignacion[i][j];
+                demanda[j] += asignacion[i][j];
+            }
+        }
+    }
+
     let html = '<table class="nw-result-table">';
+
+    // Header row
     html += '<tr><th></th>';
     for (let j = 0; j < n; j++) {
         const esFicticioCol = isFicticio && resultado.nodeFicticioAgregado.tipo === 'destino' && j === n - 1;
         html += `<th class="${esFicticioCol ? 'nw-ficticio' : ''}">Destino ${j + 1}${esFicticioCol ? ' (F)' : ''}</th>`;
     }
+    // Agregar columna de Oferta si aplica
+    if (tipo === 'asignacion' && oferta) {
+        html += '<th class="nw-supply-demand-header">Oferta</th>';
+    }
     html += '</tr>';
 
+    // Filas de datos
     for (let i = 0; i < m; i++) {
         const esFicticioRow = isFicticio && resultado.nodeFicticioAgregado.tipo === 'origen' && i === m - 1;
         html += `<tr><th class="${esFicticioRow ? 'nw-ficticio' : ''}">Origen ${i + 1}${esFicticioRow ? ' (F)' : ''}</th>`;
+
         for (let j = 0; j < n; j++) {
             const valor = matriz[i][j];
             let clase = '';
@@ -2758,11 +2819,150 @@ function generarTablaMatriz(matriz, tipo, resultado, asignacion = null) {
                 }
             }
 
+            // Para 'costos-basicas', solo mostrar costos de celdas con asignación
+            let texto;
+            if (tipo === 'costos-basicas' && asignacion && asignacion[i][j] <= EPS) {
+                texto = ''; // Celda vacía para variables no básicas
+                clase = clase || 'nw-empty-cost';
+            } else {
+                texto = Math.abs(valor) < EPS ? '0' : valor.toFixed(2);
+            }
+            html += `<td class="${clase}">${texto}</td>`;
+        }
+
+        // Agregar celda de oferta si aplica
+        if (tipo === 'asignacion' && oferta) {
+            const ofertaValor = oferta[i];
+            const ofertaTexto = Math.abs(ofertaValor) < EPS ? '0' : ofertaValor.toFixed(2);
+            html += `<td class="nw-supply-demand-cell ${esFicticioRow ? 'nw-ficticio' : ''}">${ofertaTexto}</td>`;
+        }
+
+        html += '</tr>';
+    }
+
+    // Fila de demanda si aplica
+    if (tipo === 'asignacion' && demanda) {
+        html += '<tr><th class="nw-supply-demand-header">Demanda</th>';
+        for (let j = 0; j < n; j++) {
+            const esFicticioCol = isFicticio && resultado.nodeFicticioAgregado.tipo === 'destino' && j === n - 1;
+            const demandaValor = demanda[j];
+            const demandaTexto = Math.abs(demandaValor) < EPS ? '0' : demandaValor.toFixed(2);
+            html += `<td class="nw-supply-demand-cell ${esFicticioCol ? 'nw-ficticio' : ''}">${demandaTexto}</td>`;
+        }
+        html += '<td class="nw-corner-cell"></td>'; // Celda esquina
+        html += '</tr>';
+    }
+
+    html += '</table>';
+
+    return html;
+}
+
+/**
+ * Genera la fórmula detallada del cálculo del costo total
+ * Muestra: Σ(cij × xij) = (c11 × x11) + (c12 × x12) + ... = Total
+ */
+function generarFormulaCosto(asignacion, costos) {
+    const EPS = 1e-9;
+    const m = asignacion.length;
+    const n = asignacion[0].length;
+
+    let terminos = [];
+    let total = 0;
+
+    for (let i = 0; i < m; i++) {
+        for (let j = 0; j < n; j++) {
+            if (asignacion[i][j] > EPS) {
+                const costo = costos[i][j];
+                const cantidad = asignacion[i][j];
+                const valor = costo * cantidad;
+                total += valor;
+
+                terminos.push({
+                    formula: `(${costo.toFixed(2)} × ${cantidad.toFixed(2)})`,
+                    valor: valor.toFixed(2),
+                    origen: i + 1,
+                    destino: j + 1
+                });
+            }
+        }
+    }
+
+    if (terminos.length === 0) {
+        return '<div class="nw-cost-formula">Costo Total = 0</div>';
+    }
+
+    let html = '<div class="nw-cost-formula">';
+    html += '<div class="nw-cost-formula-title">Cálculo del Costo Total:</div>';
+    html += '<div class="nw-cost-formula-content">';
+    html += '<strong>Σ(Cij × Xij)</strong> = ';
+    html += terminos.map(t => t.formula).join(' + ');
+    html += '</div>';
+    html += '<div class="nw-cost-formula-result">';
+    html += '= ' + terminos.map(t => t.valor).join(' + ');
+    html += ' = <strong>' + total.toFixed(2) + '</strong>';
+    html += '</div>';
+    html += '</div>';
+
+    return html;
+}
+
+/**
+ * Genera la matriz de evaluación con multiplicadores integrados
+ * Los ui aparecen como última columna, los vj como última fila
+ * Esto muestra visualmente que Cij = ui + vj
+ */
+function generarMatrizEvaluacionConMultiplicadores(matrizEvaluacion, ui, vj, asignacion, resultado) {
+    const m = matrizEvaluacion.length;
+    const n = matrizEvaluacion[0].length;
+    const isFicticio = resultado.nodeFicticioAgregado.tipo !== null;
+    const EPS = 1e-9;
+
+    let html = '<table class="nw-result-table nw-evaluation-table">';
+
+    // Header row con columnas de destinos + columna ui
+    html += '<tr><th></th>';
+    for (let j = 0; j < n; j++) {
+        const esFicticioCol = isFicticio && resultado.nodeFicticioAgregado.tipo === 'destino' && j === n - 1;
+        html += `<th class="${esFicticioCol ? 'nw-ficticio' : ''}">Dest ${j + 1}${esFicticioCol ? ' (F)' : ''}</th>`;
+    }
+    html += '<th class="nw-multiplier-header">ui</th>';
+    html += '</tr>';
+
+    // Filas de datos con valores de evaluación + columna ui
+    for (let i = 0; i < m; i++) {
+        const esFicticioRow = isFicticio && resultado.nodeFicticioAgregado.tipo === 'origen' && i === m - 1;
+        html += `<tr><th class="${esFicticioRow ? 'nw-ficticio' : ''}">Orig ${i + 1}${esFicticioRow ? ' (F)' : ''}</th>`;
+
+        // Valores de evaluación (ui + vj)
+        for (let j = 0; j < n; j++) {
+            const valor = matrizEvaluacion[i][j];
+            let clase = '';
+
+            // Resaltar variables básicas
+            if (asignacion && asignacion[i][j] > EPS) {
+                clase = 'nw-basica-evaluacion';
+            }
+
             const texto = Math.abs(valor) < EPS ? '0' : valor.toFixed(2);
             html += `<td class="${clase}">${texto}</td>`;
         }
+
+        // Columna ui
+        const uiValor = ui[i].toFixed(2);
+        html += `<td class="nw-multiplier-cell">${uiValor}</td>`;
         html += '</tr>';
     }
+
+    // Fila vj al final
+    html += '<tr><th class="nw-multiplier-header">vj</th>';
+    for (let j = 0; j < n; j++) {
+        const vjValor = vj[j].toFixed(2);
+        html += `<td class="nw-multiplier-cell">${vjValor}</td>`;
+    }
+    html += '<td class="nw-corner-cell"></td>'; // Celda esquina vacía
+    html += '</tr>';
+
     html += '</table>';
 
     return html;

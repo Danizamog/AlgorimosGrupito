@@ -1079,6 +1079,14 @@ body{background:var(--background);color:var(--text);overflow:hidden;height:100vh
     border: 2px solid rgba(127, 0, 255, 0.5);
 }
 
+.nw-result-table td.nw-empty-cost {
+    background: rgba(10, 10, 15, 0.3);
+    color: rgba(255, 255, 255, 0.15);
+    font-style: italic;
+    opacity: 0.6;
+    border: 1px dashed rgba(0, 247, 255, 0.1);
+}
+
 .nw-result-table td.nw-negativo {
     background: rgba(255, 0, 85, 0.3);
     color: #ffaaaa;
@@ -1121,6 +1129,139 @@ body{background:var(--background);color:var(--text);overflow:hidden;height:100vh
     background: rgba(0, 247, 255, 0.03);
     border-left: 3px solid rgba(0, 247, 255, 0.3);
     border-radius: 4px;
+}
+
+/* Fórmula del costo */
+.nw-cost-formula {
+    background: rgba(0, 247, 255, 0.08);
+    border: 2px solid rgba(0, 247, 255, 0.3);
+    border-radius: 10px;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 15px rgba(0, 247, 255, 0.2);
+}
+
+.nw-cost-formula-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--primary);
+    margin-bottom: 10px;
+}
+
+.nw-cost-formula-content {
+    font-size: 13px;
+    color: rgba(224, 224, 255, 0.9);
+    line-height: 1.8;
+    margin-bottom: 8px;
+    font-family: 'Courier New', monospace;
+}
+
+.nw-cost-formula-result {
+    font-size: 14px;
+    color: #ffffff;
+    font-weight: bold;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0, 247, 255, 0.2);
+    font-family: 'Courier New', monospace;
+}
+
+.nw-cost-formula-result strong {
+    color: var(--primary);
+    font-size: 16px;
+}
+
+/* Multiplicadores en tabla de evaluación */
+.nw-multiplier-header {
+    background: rgba(255, 0, 255, 0.2) !important;
+    color: #ff00ff !important;
+    font-weight: bold !important;
+    border: 2px solid rgba(255, 0, 255, 0.4) !important;
+}
+
+.nw-multiplier-cell {
+    background: rgba(255, 0, 255, 0.15) !important;
+    color: #ff88ff !important;
+    font-weight: bold !important;
+    border: 1px solid rgba(255, 0, 255, 0.3) !important;
+}
+
+/* Oferta y demanda */
+.nw-supply-demand-header {
+    background: rgba(255, 165, 0, 0.2) !important;
+    color: #ffaa00 !important;
+    font-weight: bold !important;
+}
+
+.nw-supply-demand-cell {
+    background: rgba(255, 165, 0, 0.1) !important;
+    color: #ffcc66 !important;
+    font-weight: bold !important;
+}
+
+.nw-supply-demand-cell.nw-ficticio {
+    background: rgba(255, 165, 0, 0.3) !important;
+    color: #ffaa00 !important;
+    border: 2px solid rgba(255, 165, 0, 0.5) !important;
+}
+
+/* Tabla de evaluación con multiplicadores */
+.nw-evaluation-table {
+    border: 2px solid rgba(127, 0, 255, 0.4);
+}
+
+/* Costo final destacado */
+.nw-final-cost {
+    background: linear-gradient(135deg, rgba(0, 247, 255, 0.15), rgba(0, 180, 255, 0.15));
+    border: 3px solid var(--primary);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 25px;
+    text-align: center;
+    box-shadow: 0 0 25px rgba(0, 247, 255, 0.4);
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% {
+        box-shadow: 0 0 25px rgba(0, 247, 255, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 35px rgba(0, 247, 255, 0.6);
+    }
+}
+
+.nw-final-cost-label {
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--primary);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.nw-final-cost-value {
+    font-size: 42px;
+    font-weight: bold;
+    color: #ffffff;
+    text-shadow: 0 0 20px rgba(0, 247, 255, 0.8);
+    font-family: 'Courier New', monospace;
+}
+
+/* Caja de información */
+.nw-info-box {
+    background: rgba(0, 180, 255, 0.1);
+    border-left: 4px solid var(--primary);
+    padding: 15px 20px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    color: rgba(224, 224, 255, 0.9);
+    line-height: 1.6;
+}
+
+.nw-info-box strong {
+    color: var(--primary);
 }
 
 .nw-status {
