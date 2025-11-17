@@ -9,6 +9,16 @@ let lastKruskalSelectedIds = new Set();
 // Preferencia para Kruskal: 'min' (árbol mínimo) o 'max' (árbol máximo)
 let kruskalPreference = 'min';
 
+/* ===== VARIABLES PARA DIJKSTRA ===== */
+let isDijkstraMode = false;
+let dijkstraStartNode = null;
+let dijkstraDistances = new Map();
+let dijkstraPrevious = new Map();
+let dijkstraVisited = new Set();
+let dijkstraSteps = [];
+let dijkstraAnimationRunning = false;
+let dijkstraCurrentStepIndex = 0;
+
 /* ===== REFERENCIAS DOM ===== */
 const canvas = document.getElementById('canvas'), svg = canvas.querySelector('svg');
 const menuToggle = document.getElementById('menuToggle'), menuContent = document.getElementById('menuContent');
@@ -31,6 +41,72 @@ const assignmentModal = document.getElementById('assignmentModal');
 const assignmentBody = document.getElementById('assignmentBody');
 const closeAssignment = document.getElementById('closeAssignment');
 const assignmentCloseBtn = document.getElementById('assignmentCloseBtn');
+// Dijkstra elements - will be retrieved when needed
+let analysisDijkstra = null;
+let dijkstraModal = null;
+let dijkstraNodeList = null;
+let closeDijkstraModal = null;
+let cancelDijkstraBtn = null;
+let dijkstraResultsModal = null;
+let dijkstraResultsContent = null;
+let closeDijkstraResultsModal = null;
+let closeDijkstraResultsBtn = null;
+
+// Initialize Dijkstra elements after DOM is loaded
+function initializeDijkstraElements() {
+    analysisDijkstra = document.getElementById('analysisDijkstra');
+    dijkstraModal = document.getElementById('dijkstraModal');
+    dijkstraNodeList = document.getElementById('dijkstraNodeList');
+    closeDijkstraModal = document.getElementById('closeDijkstraModal');
+    cancelDijkstraBtn = document.getElementById('cancelDijkstraBtn');
+    dijkstraResultsModal = document.getElementById('dijkstraResultsModal');
+    dijkstraResultsContent = document.getElementById('dijkstraResultsContent');
+    closeDijkstraResultsModal = document.getElementById('closeDijkstraResultsModal');
+    closeDijkstraResultsBtn = document.getElementById('closeDijkstraResultsBtn');
+
+    console.log('Inicializando Dijkstra - Botón encontrado:', analysisDijkstra);
+
+    // Add event listeners after elements are found
+    if (analysisDijkstra) {
+        analysisDijkstra.addEventListener('click', () => {
+            console.log('Click en botón Dijkstra detectado');
+            const analysisMenuEl = document.getElementById('analysisMenu');
+            if (analysisMenuEl) analysisMenuEl.classList.remove('show');
+            initiateDijkstra();
+        });
+        console.log('Event listener agregado correctamente');
+    } else {
+        console.error('ERROR: No se encontró el botón analysisDijkstra');
+    }
+
+    if (closeDijkstraModal) closeDijkstraModal.addEventListener('click', () => {
+        if (dijkstraModal) dijkstraModal.style.display = 'none';
+        clearDijkstraVisualization();
+    });
+
+    if (cancelDijkstraBtn) cancelDijkstraBtn.addEventListener('click', () => {
+        if (dijkstraModal) dijkstraModal.style.display = 'none';
+        clearDijkstraVisualization();
+    });
+
+    if (closeDijkstraResultsModal) closeDijkstraResultsModal.addEventListener('click', () => {
+        if (dijkstraResultsModal) dijkstraResultsModal.style.display = 'none';
+    });
+
+    if (closeDijkstraResultsBtn) closeDijkstraResultsBtn.addEventListener('click', () => {
+        if (dijkstraResultsModal) dijkstraResultsModal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (e) => {
+        if (dijkstraModal && e.target === dijkstraModal) {
+            dijkstraModal.style.display = 'none';
+            clearDijkstraVisualization();
+        }
+        if (dijkstraResultsModal && e.target === dijkstraResultsModal) {
+            dijkstraResultsModal.style.display = 'none';
+        }
+    });
+}
 
 /* ===== FUNCIONALIDAD DE ALTERNANCIA DE MODO ===== */
 document.getElementById('toggleMode').addEventListener('click', toggleMode);
@@ -390,6 +466,7 @@ document.getElementById('edgeColor').addEventListener('change', e => {
 
 /* ===== CREAR NODO ===== */
 canvas.addEventListener('click', e => {
+    // Permitir crear nodos normalmente, incluso en modo Dijkstra
     if (['canvas','grid','svg'].includes(e.target.id) || e.target.classList.contains('grid')) {
         const rect = canvas.getBoundingClientRect();
         addNode(e.clientX - rect.left, e.clientY - rect.top);
@@ -411,9 +488,26 @@ function addNode(x, y) {
 canvas.addEventListener('dblclick', e => {
     if (e.target.classList.contains('node')) {
         const nodeId = parseInt(e.target.dataset.id);
+
+        // Si está en modo Dijkstra
+        if (isDijkstraMode) {
+            // Si no hay nodo inicial seleccionado, seleccionarlo y ejecutar el algoritmo
+            if (dijkstraStartNode === null && !dijkstraAnimationRunning) {
+                dijkstraStartNode = nodeId;
+                showNotification(`Nodo inicial: ${nodes.find(n => n.id === nodeId).label} - Ejecutando Dijkstra...`, 'success');
+                executeDijkstra(nodeId);
+            }
+            // Si ya se ejecutó el algoritmo, mostrar la ruta más corta hacia este nodo
+            else if (dijkstraDistances.size > 0 && !dijkstraAnimationRunning) {
+                highlightShortestPath(nodeId);
+            }
+            return;
+        }
+
+        // Funcionamiento normal: crear aristas
         if (selectedNode === null) {
             selectedNode = nodeId; e.target.classList.add('selected');
-        
+
         } else {
             addEdge(selectedNode, nodeId);
             document.querySelector(`.node[data-id="${selectedNode}"]`).classList.remove('selected'); selectedNode = null;
@@ -934,9 +1028,36 @@ function generateMatrixHTML() {
 }
 
 /* ===== AYUDA ===== */
-document.getElementById('openHelp').addEventListener('click', () => document.getElementById('helpModal').style.display = 'block');
-document.getElementById('closeHelp').addEventListener('click', () => document.getElementById('helpModal').style.display = 'none');
-document.getElementById('exportPdfBtn').addEventListener('click', () => {
+const openHelpBtn = document.getElementById('openHelp');
+const closeHelpBtn = document.getElementById('closeHelp');
+const closeHelpModalBtn = document.getElementById('closeHelpModal');
+const exportPdfBtn = document.getElementById('exportPdfBtn');
+
+if (openHelpBtn) openHelpBtn.addEventListener('click', () => {
+    const helpModal = document.getElementById('helpModal');
+    if (helpModal) helpModal.style.display = 'block';
+});
+
+if (closeHelpBtn) closeHelpBtn.addEventListener('click', () => {
+    const helpModal = document.getElementById('helpModal');
+    if (helpModal) helpModal.style.display = 'none';
+});
+
+// Cerrar el modal de ayuda con el botón X
+if (closeHelpModalBtn) closeHelpModalBtn.addEventListener('click', () => {
+    const helpModal = document.getElementById('helpModal');
+    if (helpModal) helpModal.style.display = 'none';
+});
+
+// Cerrar modal de ayuda al hacer clic fuera de él
+window.addEventListener('click', (e) => {
+    const helpModal = document.getElementById('helpModal');
+    if (e.target === helpModal) {
+        helpModal.style.display = 'none';
+    }
+});
+
+if (exportPdfBtn) exportPdfBtn.addEventListener('click', () => {
     const helpContent = document.querySelector('.help-content').innerHTML;
     const newWindow = window.open('', '_blank');
     newWindow.document.write(`<html><head><title>Ayuda - Grafo Completo Editable</title><style>body{font-family:Arial,sans-serif;padding:40px;background:#f9f9f9;color:#333}h3{color:#007acc}ul{margin-bottom:20px}li{margin-bottom:8px}@media print{body{background:white}}</style></head><body><h1>Ayuda del Editor de Grafos</h1>${helpContent}</body></html>`);
@@ -1384,6 +1505,11 @@ document.getElementById('assignMinBtn')?.addEventListener('click', () => runAssi
 
 // --- Kruskal mode: crear botón dinámicamente y funciones ---
 document.addEventListener('DOMContentLoaded', () => {
+    // Inicializar elementos de Dijkstra con un pequeño delay para asegurar que el DOM esté listo
+    setTimeout(() => {
+        initializeDijkstraElements();
+    }, 100);
+
     // Crear botón en topbar si no existe
     const tabs = document.querySelector('.tabs');
     if (tabs && !document.getElementById('toggleKruskal')) {
@@ -3004,4 +3130,513 @@ function enforceKruskalEdgePolicy() {
     }
     // Forzar no dirigida en las aristas restantes
     edges.forEach(e => { e.directed = false; e.bidirectional = false; });
+}
+
+/* ===== DIJKSTRA ALGORITHM IMPLEMENTATION ===== */
+
+// Función para mostrar notificaciones visuales
+function showNotification(message, type = 'info', persistent = false) {
+    // Remover notificación anterior si existe
+    const existingNotification = document.querySelector('.dijkstra-notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+
+    const notification = document.createElement('div');
+    notification.className = 'dijkstra-notification';
+    notification.textContent = message;
+
+    const colors = {
+        'info': '#00f7ff',
+        'success': '#00ff00',
+        'warning': '#ffaa00',
+        'error': '#ff3333'
+    };
+
+    notification.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(26, 26, 46, 0.95);
+        border: 2px solid ${colors[type]};
+        color: ${colors[type]};
+        padding: 15px 30px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        z-index: 3000;
+        box-shadow: 0 0 20px ${colors[type]}80;
+        animation: slideUpFromBottom 0.3s ease-out;
+    `;
+
+    document.body.appendChild(notification);
+
+    // Auto-remover después de 3 segundos solo si no es persistente
+    if (!persistent) {
+        setTimeout(() => {
+            notification.style.animation = 'slideDownToBottom 0.3s ease-in';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+}
+
+// Actualizar el botón de Dijkstra según el estado
+function updateDijkstraButton() {
+    if (analysisDijkstra) {
+        if (isDijkstraMode) {
+            analysisDijkstra.style.background = '#00ff00';
+            analysisDijkstra.style.color = '#000';
+            analysisDijkstra.textContent = '🛤️ Dijkstra: ON';
+        } else {
+            analysisDijkstra.style.background = '';
+            analysisDijkstra.style.color = '';
+            analysisDijkstra.textContent = '🛤️ Dijkstra (Ruta Más Corta)';
+        }
+    }
+}
+
+function initiateDijkstra() {
+    // Validar que hay nodos
+    if (nodes.length === 0) {
+        alert('Por favor, crea al menos un nodo antes de ejecutar Dijkstra');
+        return;
+    }
+
+    // Alternar modo Dijkstra
+    if (isDijkstraMode && !dijkstraAnimationRunning) {
+        // Desactivar modo Dijkstra
+        isDijkstraMode = false;
+        clearDijkstraVisualization();
+        showNotification('Modo Dijkstra desactivado', 'info');
+        updateDijkstraButton();
+        return;
+    }
+
+    if (dijkstraAnimationRunning) {
+        alert('Espera a que termine la animación actual');
+        return;
+    }
+
+    // Activar modo Dijkstra
+    isDijkstraMode = true;
+    dijkstraStartNode = null;
+    dijkstraDistances.clear();
+    dijkstraPrevious.clear();
+    dijkstraVisited.clear();
+    dijkstraSteps = [];
+
+    showNotification('🛤️ Modo Dijkstra activado - Haz doble clic en un nodo para seleccionar el inicio', 'success', true);
+    updateDijkstraButton();
+    console.log('Modo Dijkstra activado - esperando selección de nodo inicial');
+}
+
+function executeDijkstra(startNodeId) {
+    // Remover notificación de selección de nodo inicial
+    const existingNotification = document.querySelector('.dijkstra-notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+
+    // Validar que hay aristas
+    if (edges.length === 0) {
+        alert('Por favor, crea al menos una arista antes de ejecutar Dijkstra');
+        return;
+    }
+
+    // Validar pesos no negativos
+    for (const edge of edges) {
+        if (edge.weight < 0) {
+            alert('Dijkstra no funciona con pesos negativos. Por favor, usa solo pesos positivos.');
+            return;
+        }
+    }
+
+    // Construir lista de adyacencia
+    const adj = new Map();
+    nodes.forEach(n => adj.set(n.id, []));
+    edges.forEach(e => {
+        adj.get(e.from).push({ to: e.to, weight: e.weight });
+        // Si es no dirigida, agregar también la dirección inversa
+        if (!e.directed) {
+            adj.get(e.to).push({ to: e.from, weight: e.weight });
+        }
+    });
+
+    // Inicializar estructuras para Dijkstra
+    dijkstraDistances.clear();
+    dijkstraPrevious.clear();
+    dijkstraVisited.clear();
+    dijkstraSteps = [];
+
+    // Inicializar distancias
+    nodes.forEach(n => {
+        dijkstraDistances.set(n.id, n.id === startNodeId ? 0 : Infinity);
+        dijkstraPrevious.set(n.id, null);
+    });
+
+    const unvisited = new Set(nodes.map(n => n.id));
+    const startNode = nodes.find(n => n.id === startNodeId);
+
+    // Ejecutar Dijkstra y registrar pasos
+    while (unvisited.size > 0) {
+        // Encontrar el nodo no visitado con menor distancia
+        let current = null;
+        let minDist = Infinity;
+
+        for (const nodeId of unvisited) {
+            if (dijkstraDistances.get(nodeId) < minDist) {
+                minDist = dijkstraDistances.get(nodeId);
+                current = nodeId;
+            }
+        }
+
+        if (current === null || minDist === Infinity) break;
+
+        unvisited.delete(current);
+        dijkstraVisited.add(current);
+
+        // Registrar paso
+        dijkstraSteps.push({
+            current: current,
+            distances: new Map(dijkstraDistances),
+            visited: new Set(dijkstraVisited)
+        });
+
+        // Relajar aristas
+        const neighbors = adj.get(current) || [];
+        for (const { to, weight } of neighbors) {
+            if (unvisited.has(to)) {
+                const newDist = dijkstraDistances.get(current) + weight;
+                if (newDist < dijkstraDistances.get(to)) {
+                    dijkstraDistances.set(to, newDist);
+                    dijkstraPrevious.set(to, current);
+                }
+            }
+        }
+    }
+
+    // Visualizar la ejecución paso a paso
+    visualizeDijkstraExecution(startNodeId);
+}
+
+function visualizeDijkstraExecution(startNodeId) {
+    dijkstraAnimationRunning = true;
+
+    // Función para mostrar un paso
+    function showStep(stepIndex) {
+        if (stepIndex >= dijkstraSteps.length) {
+            // Al terminar la animación
+            dijkstraAnimationRunning = false;
+            showNotification('✓ Dijkstra completado - Haz doble clic en cualquier nodo para ver su ruta más corta', 'success');
+            // Mostrar distancias finales
+            updateDijkstraDistanceLabels(dijkstraDistances);
+            return;
+        }
+
+        clearDijkstraNodeStyles();
+
+        const step = dijkstraSteps[stepIndex];
+        const { current, distances, visited } = step;
+
+        // Visualizar nodo inicial en verde
+        const startNodeEl = document.querySelector(`.node[data-id="${startNodeId}"]`);
+        if (startNodeEl) {
+            startNodeEl.style.background = 'radial-gradient(circle, #00ff00, #008800)';
+            startNodeEl.style.boxShadow = '0 0 20px #00ff00';
+        }
+
+        // Visualizar nodo actual siendo procesado en amarillo
+        const currentNodeEl = document.querySelector(`.node[data-id="${current}"]`);
+        if (currentNodeEl) {
+            currentNodeEl.style.background = 'radial-gradient(circle, #ffff00, #cc8800)';
+            currentNodeEl.style.boxShadow = '0 0 25px #ffff00';
+            currentNodeEl.style.transform = 'scale(1.15)';
+        }
+
+        // Visualizar nodos visitados en azul
+        visited.forEach(nodeId => {
+            if (nodeId !== startNodeId && nodeId !== current) {
+                const nodeEl = document.querySelector(`.node[data-id="${nodeId}"]`);
+                if (nodeEl) {
+                    nodeEl.style.background = 'radial-gradient(circle, #0088ff, #004488)';
+                    nodeEl.style.boxShadow = '0 0 15px #0088ff';
+                }
+            }
+        });
+
+        // Actualizar etiquetas de distancia en nodos
+        updateDijkstraDistanceLabels(distances);
+
+        // Continuar con siguiente paso después de 600ms
+        setTimeout(() => {
+            showStep(stepIndex + 1);
+        }, 600);
+    }
+
+    showStep(0);
+}
+
+function updateDijkstraDistanceLabels(distances) {
+    // Remover etiquetas antiguas
+    document.querySelectorAll('.dijkstra-distance-label').forEach(el => el.remove());
+
+    // Crear nuevas etiquetas DENTRO de cada nodo
+    distances.forEach((dist, nodeId) => {
+        const nodeEl = document.querySelector(`.node[data-id="${nodeId}"]`);
+        if (nodeEl) {
+            // Crear badge de distancia
+            const badge = document.createElement('div');
+            badge.className = 'dijkstra-distance-label';
+            const distText = dist === Infinity ? '∞' : Math.round(dist);
+            badge.textContent = distText;
+
+            badge.style.cssText = `
+                position: absolute;
+                top: 2px;
+                right: 2px;
+                background: ${dist === Infinity ? '#ff3333' : '#00ff00'};
+                color: #000;
+                font-size: 10px;
+                font-weight: bold;
+                padding: 2px 5px;
+                border-radius: 10px;
+                pointer-events: none;
+                box-shadow: 0 0 5px ${dist === Infinity ? '#ff3333' : '#00ff00'};
+                z-index: 10;
+                min-width: 18px;
+                text-align: center;
+            `;
+
+            nodeEl.appendChild(badge);
+        }
+    });
+}
+
+function clearDijkstraNodeStyles() {
+    document.querySelectorAll('.node').forEach(node => {
+        node.style.background = '';
+        node.style.boxShadow = '';
+        node.style.transform = '';
+    });
+}
+
+function clearDijkstraVisualization() {
+    isDijkstraMode = false;
+    dijkstraAnimationRunning = false;
+    dijkstraStartNode = null;
+    dijkstraCurrentStepIndex = 0;
+    dijkstraSteps = [];
+    dijkstraDistances.clear();
+    dijkstraPrevious.clear();
+    dijkstraVisited.clear();
+
+    // Remover notificaciones persistentes
+    const existingNotification = document.querySelector('.dijkstra-notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+
+    clearDijkstraNodeStyles();
+    document.querySelectorAll('.dijkstra-distance-label').forEach(el => el.remove());
+    document.querySelectorAll('.dijkstra-edge-highlight').forEach(el => el.remove());
+
+    // Restaurar aristas a su color normal
+    const allEdgePaths = document.querySelectorAll('.edge-path');
+    const allEdgeLabels = document.querySelectorAll('.edge-label');
+
+    allEdgePaths.forEach(edgePath => {
+        edgePath.setAttribute('stroke', edgeColor);
+        edgePath.setAttribute('stroke-width', '3');
+        edgePath.style.opacity = '1';
+        edgePath.style.filter = '';
+        edgePath.classList.remove('dijkstra-path-edge');
+    });
+
+    allEdgeLabels.forEach(label => {
+        label.style.opacity = '1';
+        label.style.fill = '';
+        label.style.fontWeight = '';
+        label.style.fontSize = '';
+    });
+
+    updateDijkstraButton();
+}
+
+// Función para resaltar visualmente la ruta más corta hacia un nodo
+function highlightShortestPath(targetNodeId) {
+    if (dijkstraStartNode === null || dijkstraDistances.size === 0) {
+        return;
+    }
+
+    // Limpiar resaltados anteriores
+    document.querySelectorAll('.dijkstra-edge-highlight').forEach(el => el.remove());
+    clearDijkstraNodeStyles();
+
+    // Restaurar todas las aristas primero
+    const allEdgePaths = document.querySelectorAll('.edge-path');
+    const allEdgeLabels = document.querySelectorAll('.edge-label');
+
+    allEdgePaths.forEach(edgePath => {
+        edgePath.setAttribute('stroke', edgeColor);
+        edgePath.setAttribute('stroke-width', '3');
+        edgePath.style.opacity = '1';
+        edgePath.style.filter = '';
+    });
+
+    allEdgeLabels.forEach(label => {
+        label.style.opacity = '1';
+        label.style.fill = '';
+        label.style.fontWeight = '';
+        label.style.fontSize = '';
+    });
+
+    const distance = dijkstraDistances.get(targetNodeId);
+    const targetNode = nodes.find(n => n.id === targetNodeId);
+
+    if (distance === Infinity) {
+        showNotification(`Nodo ${targetNode.label}: Inalcanzable desde el nodo inicial`, 'warning', true);
+        return;
+    }
+
+    // Reconstruir el camino
+    const path = [];
+    let current = targetNodeId;
+    while (current !== null) {
+        path.unshift(current);
+        current = dijkstraPrevious.get(current);
+    }
+
+    // Mostrar información del camino (persistente)
+    const pathLabels = path.map(id => nodes.find(n => n.id === id).label).join(' → ');
+    showNotification(`Ruta: ${pathLabels} | Distancia total: ${distance.toFixed(1)}`, 'info', true);
+
+    // Resaltar nodos del camino
+    path.forEach((nodeId, index) => {
+        const nodeEl = document.querySelector(`.node[data-id="${nodeId}"]`);
+        if (nodeEl) {
+            if (index === 0) {
+                // Nodo inicial
+                nodeEl.style.background = 'radial-gradient(circle, #00ff00, #008800)';
+                nodeEl.style.boxShadow = '0 0 25px #00ff00';
+            } else if (index === path.length - 1) {
+                // Nodo destino
+                nodeEl.style.background = 'radial-gradient(circle, #ff00ff, #880088)';
+                nodeEl.style.boxShadow = '0 0 25px #ff00ff';
+                nodeEl.style.transform = 'scale(1.15)';
+            } else {
+                // Nodos intermedios
+                nodeEl.style.background = 'radial-gradient(circle, #00ffff, #008888)';
+                nodeEl.style.boxShadow = '0 0 20px #00ffff';
+            }
+        }
+    });
+
+    // Ahora, atenuar todas las aristas (reutilizando las variables ya declaradas arriba)
+    allEdgePaths.forEach(edgePath => {
+        edgePath.setAttribute('stroke', '#333333');
+        edgePath.setAttribute('stroke-width', '2');
+        edgePath.style.opacity = '0.3';
+    });
+
+    allEdgeLabels.forEach(label => {
+        label.style.opacity = '0.3';
+    });
+
+    // Resaltar aristas del camino
+    for (let i = 0; i < path.length - 1; i++) {
+        const fromId = path[i];
+        const toId = path[i + 1];
+
+        // Buscar la arista en ambas direcciones (dirigida o no dirigida)
+        allEdgePaths.forEach(edgePath => {
+            const edgeFrom = parseInt(edgePath.getAttribute('data-from'));
+            const edgeTo = parseInt(edgePath.getAttribute('data-to'));
+
+            // Verificar si esta arista es parte del camino
+            if ((edgeFrom === fromId && edgeTo === toId) || (edgeFrom === toId && edgeTo === fromId)) {
+                edgePath.setAttribute('stroke', '#00ff00');
+                edgePath.setAttribute('stroke-width', '5');
+                edgePath.style.opacity = '1';
+                edgePath.style.filter = 'drop-shadow(0 0 8px #00ff00)';
+                edgePath.classList.add('dijkstra-path-edge');
+
+                // Resaltar también la etiqueta de peso
+                const edgeId = edgePath.getAttribute('data-id');
+                const edgeLabel = document.querySelector(`.edge-label[data-edge-id="${edgeId}"]`);
+                if (edgeLabel) {
+                    edgeLabel.style.opacity = '1';
+                    edgeLabel.style.fill = '#00ff00';
+                    edgeLabel.style.fontWeight = 'bold';
+                    edgeLabel.style.fontSize = '16px';
+                }
+            }
+        });
+    }
+}
+
+function showDijkstraResults(startNodeId) {
+    // Crear tabla de resultados
+    let html = '<h3 style="color: #00f7ff; margin-bottom: 20px;">Distancias mínimas desde Nodo ' +
+        nodes.find(n => n.id === startNodeId)?.label + ':</h3>';
+
+    html += '<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">';
+    html += '<tr style="background: #00f7ff; color: #000;">';
+    html += '<th style="border: 1px solid #00f7ff; padding: 10px; text-align: left;">Nodo Destino</th>';
+    html += '<th style="border: 1px solid #00f7ff; padding: 10px; text-align: center;">Distancia</th>';
+    html += '<th style="border: 1px solid #00f7ff; padding: 10px; text-align: left;">Camino</th>';
+    html += '</tr>';
+
+    // Crear array de nodos destino y ordenar
+    const destinos = [];
+    nodes.forEach(n => {
+        if (n.id !== startNodeId) {
+            destinos.push({
+                id: n.id,
+                label: n.label,
+                distance: dijkstraDistances.get(n.id)
+            });
+        }
+    });
+
+    destinos.forEach((dest, index) => {
+        const distance = dest.distance === Infinity ? '∞' : dest.distance.toFixed(2);
+        const camino = reconstructPath(startNodeId, dest.id);
+        const rowStyle = index % 2 === 0 ? 'background: #1a1a1a;' : 'background: #0a0a0a;';
+
+        html += `<tr style="${rowStyle}">`;
+        html += `<td style="border: 1px solid #00f7ff; padding: 10px; color: #00f7ff; font-weight: bold;">Nodo ${dest.label}</td>`;
+        html += `<td style="border: 1px solid #00f7ff; padding: 10px; text-align: center; color: #ffff00;">${distance}</td>`;
+        html += `<td style="border: 1px solid #00f7ff; padding: 10px; color: #00ff00;">${camino}</td>`;
+        html += '</tr>';
+    });
+
+    html += '</table>';
+
+    // Agregar nota sobre nodos inalcanzables
+    const unreachable = destinos.filter(d => d.distance === Infinity);
+    if (unreachable.length > 0) {
+        html += '<p style="color: #ff6666; margin-top: 15px;">⚠️ <strong>Nodos inalcanzables:</strong> ' +
+            unreachable.map(d => `Nodo ${d.label}`).join(', ') + '</p>';
+    }
+
+    dijkstraResultsContent.innerHTML = html;
+    dijkstraResultsModal.style.display = 'block';
+}
+
+function reconstructPath(startId, endId) {
+    if (dijkstraDistances.get(endId) === Infinity) {
+        return 'Inalcanzable';
+    }
+
+    const path = [];
+    let current = endId;
+
+    while (current !== null) {
+        const node = nodes.find(n => n.id === current);
+        path.unshift(`${node.label}`);
+        current = dijkstraPrevious.get(current);
+    }
+
+    return path.join(' → ');
 }

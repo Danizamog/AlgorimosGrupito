@@ -741,6 +741,9 @@
                     <button class="nav-item" data-section="ordenamiento">
                         <span>🔀</span> Algoritmos de Ordenamiento
                     </button>
+                    <button class="nav-item" data-section="dijkstra">
+                        <span>🛤️</span> Algoritmo Dijkstra
+                    </button>
                     <button class="nav-item" data-section="northwest">
                         <span>🚚</span> Algoritmo NorthWest
                     </button>
@@ -1867,6 +1870,173 @@
                             <div class="visual-icon" style="background: #00ff00; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;"></div>
                             <div class="visual-label">Ordenado</div>
                             <div class="visual-desc">Elemento en posición final</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección Dijkstra -->
+                <div class="section" id="dijkstra">
+                    <h2 class="section-title">🛤️ Algoritmo de Dijkstra - Ruta Más Corta</h2>
+
+                    <div style="text-align: center; font-size: 18px; color: #00f7ff; margin-bottom: 30px; font-weight: 500;">
+                        Encuentra el camino más corto entre nodos en tu grafo 🎯
+                    </div>
+
+                    <div class="visual-guide">
+                        <h4>🎨 Guía Visual de la Animación</h4>
+                        <div class="visual-items-container">
+                            <div class="visual-item">
+                                <div class="visual-icon" style="color: #00ff00;">🟢</div>
+                                <div class="visual-label">Nodo Inicial</div>
+                                <div class="visual-desc">El nodo desde donde comienza la búsqueda. Se muestra en verde con resplandor.</div>
+                            </div>
+
+                            <div class="visual-item">
+                                <div class="visual-icon" style="color: #ffff00;">🟡</div>
+                                <div class="visual-label">Nodo Activo</div>
+                                <div class="visual-desc">Nodo que está siendo procesado actualmente. Aparece en amarillo y más grande.</div>
+                            </div>
+
+                            <div class="visual-item">
+                                <div class="visual-icon" style="color: #0088ff;">🔵</div>
+                                <div class="visual-label">Nodo Visitado</div>
+                                <div class="visual-desc">Nodos ya procesados con distancia óptima calculada. Se muestran en azul.</div>
+                            </div>
+
+                            <div class="visual-item">
+                                <div class="visual-icon" style="color: #ff00ff;">🟣</div>
+                                <div class="visual-label">Nodo Destino</div>
+                                <div class="visual-desc">Nodo seleccionado para ver su ruta más corta. Aparece en magenta y más grande.</div>
+                            </div>
+
+                            <div class="visual-item">
+                                <div class="visual-icon" style="color: #00ffff;">🔷</div>
+                                <div class="visual-label">Nodos Intermedios</div>
+                                <div class="visual-desc">Nodos que forman parte del camino más corto. Se muestran en cyan.</div>
+                            </div>
+
+                            <div class="visual-item">
+                                <div class="visual-icon">🔢</div>
+                                <div class="visual-label">Badge de Distancia</div>
+                                <div class="visual-desc">Número en la esquina superior derecha de cada nodo que muestra la distancia mínima calculada.</div>
+                            </div>
+
+                            <div class="visual-item">
+                                <div class="visual-icon" style="color: #00ff00;">━━</div>
+                                <div class="visual-label">Aristas del Camino</div>
+                                <div class="visual-desc">Aristas que forman parte de la ruta más corta. Se resaltan en verde brillante con grosor aumentado.</div>
+                            </div>
+
+                            <div class="visual-item">
+                                <div class="visual-icon" style="color: #333333;">━━</div>
+                                <div class="visual-label">Aristas No Usadas</div>
+                                <div class="visual-desc">Aristas que no forman parte del camino. Se atenúan (30% opacidad) en gris oscuro.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="usage-guide">
+                        <h4 style="text-align: center; font-size: 24px; margin-bottom: 30px;">🚀 Cómo Usar Dijkstra en 4 Pasos</h4>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid #00ff00; border-radius: 15px; padding: 25px; text-align: center;">
+                                <div style="font-size: 50px; margin-bottom: 15px;">1️⃣</div>
+                                <h5 style="color: #00ff00; font-size: 20px; margin-bottom: 10px;">Activa Dijkstra</h5>
+                                <p style="color: #aaa; font-size: 15px;">⚡ Análisis → 🛤️ Dijkstra</p>
+                                <p style="color: #00ff00; font-size: 14px; margin-top: 10px;">El botón se pondrá verde ✓</p>
+                            </div>
+
+                            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid #ffaa00; border-radius: 15px; padding: 25px; text-align: center;">
+                                <div style="font-size: 50px; margin-bottom: 15px;">2️⃣</div>
+                                <h5 style="color: #ffaa00; font-size: 20px; margin-bottom: 10px;">Selecciona Inicio</h5>
+                                <p style="color: #aaa; font-size: 15px;">Doble clic en un nodo</p>
+                                <p style="color: #ffaa00; font-size: 14px; margin-top: 10px;">¡Animación automática! 🎬</p>
+                            </div>
+
+                            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid #00f7ff; border-radius: 15px; padding: 25px; text-align: center;">
+                                <div style="font-size: 50px; margin-bottom: 15px;">3️⃣</div>
+                                <h5 style="color: #00f7ff; font-size: 20px; margin-bottom: 10px;">Observa el Proceso</h5>
+                                <p style="color: #aaa; font-size: 15px;">Mira cómo se calculan distancias</p>
+                                <p style="color: #00f7ff; font-size: 14px; margin-top: 10px;">Los badges muestran distancias 🔢</p>
+                            </div>
+
+                            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid #ff00ff; border-radius: 15px; padding: 25px; text-align: center;">
+                                <div style="font-size: 50px; margin-bottom: 15px;">4️⃣</div>
+                                <h5 style="color: #ff00ff; font-size: 20px; margin-bottom: 10px;">Explora Rutas</h5>
+                                <p style="color: #aaa; font-size: 15px;">Doble clic en cualquier nodo</p>
+                                <p style="color: #ff00ff; font-size: 14px; margin-top: 10px;">¡Ve el camino en verde! 🛤️</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%); border: 2px solid #00f7ff; border-radius: 15px; padding: 30px; margin: 30px 0;">
+                        <h4 style="text-align: center; color: #00f7ff; font-size: 22px; margin-bottom: 20px;">💡 Ejemplo Rápido</h4>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 60px;">🗺️</div>
+                                <p style="color: #aaa; margin-top: 10px;">4 Ciudades</p>
+                            </div>
+                            <div style="font-size: 40px; color: #00ff00;">→</div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 60px;">🛤️</div>
+                                <p style="color: #aaa; margin-top: 10px;">Dijkstra calcula</p>
+                            </div>
+                            <div style="font-size: 40px; color: #00ff00;">→</div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 60px;">✅</div>
+                                <p style="color: #00ff00; margin-top: 10px; font-weight: bold;">Ruta Óptima</p>
+                            </div>
+                        </div>
+                        <p style="text-align: center; color: #00f7ff; margin-top: 20px; font-size: 16px;">
+                            A → B → C → D = <strong>10 km</strong> (la más corta)
+                        </p>
+                    </div>
+
+                    <div style="margin: 30px 0;">
+                        <h4 style="text-align: center; font-size: 22px; margin-bottom: 25px;">⚠️ Problemas Comunes</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                            <div style="background: rgba(255, 51, 51, 0.1); border-left: 4px solid #ff3333; padding: 15px; border-radius: 8px;">
+                                <div style="color: #ff3333; font-weight: bold; margin-bottom: 8px;">❌ Pesos negativos</div>
+                                <div style="color: #aaa; font-size: 14px;">Usa solo pesos positivos</div>
+                            </div>
+                            <div style="background: rgba(255, 170, 0, 0.1); border-left: 4px solid #ffaa00; padding: 15px; border-radius: 8px;">
+                                <div style="color: #ffaa00; font-weight: bold; margin-bottom: 8px;">⚠️ Nodo inalcanzable</div>
+                                <div style="color: #aaa; font-size: 14px;">Verifica las conexiones</div>
+                            </div>
+                            <div style="background: rgba(0, 255, 0, 0.1); border-left: 4px solid #00ff00; padding: 15px; border-radius: 8px;">
+                                <div style="color: #00ff00; font-weight: bold; margin-bottom: 8px;">✅ Para desactivar</div>
+                                <div style="color: #aaa; font-size: 14px;">Click en Dijkstra otra vez</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid #ff00ff; border-radius: 15px; padding: 30px; margin: 30px 0;">
+                        <h4 style="text-align: center; color: #ff00ff; font-size: 22px; margin-bottom: 25px;">🌍 ¿Para Qué Sirve?</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; text-align: center;">
+                            <div>
+                                <div style="font-size: 50px; margin-bottom: 10px;">🗺️</div>
+                                <div style="color: #aaa; font-size: 14px;">GPS</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 50px; margin-bottom: 10px;">🌐</div>
+                                <div style="color: #aaa; font-size: 14px;">Redes</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 50px; margin-bottom: 10px;">✈️</div>
+                                <div style="color: #aaa; font-size: 14px;">Vuelos</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 50px; margin-bottom: 10px;">🚛</div>
+                                <div style="color: #aaa; font-size: 14px;">Logística</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 50px; margin-bottom: 10px;">🎮</div>
+                                <div style="color: #aaa; font-size: 14px;">Videojuegos</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 50px; margin-bottom: 10px;">🏥</div>
+                                <div style="color: #aaa; font-size: 14px;">Emergencias</div>
+                            </div>
                         </div>
                     </div>
                 </div>

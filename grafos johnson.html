@@ -17,7 +17,7 @@
             <button id="generateMatrix" class="tab-btn" title="Ver/editar la matriz de adyacencia">🔢 Matriz</button>
             <button id="saveGraph" class="tab-btn" title="Exportar el grafo a JSON">💾 Exportar</button>
             <button id="loadGraph" class="tab-btn" title="Importar un grafo desde JSON">📂 Importar</button>
-            <a id="openHelp" class="tab-btn" title="Ayuda" href="ayuda.html">📘 Ayuda</a>
+            <button id="openHelp" class="tab-btn" title="Ayuda">📘 Ayuda</button>
             <a id="openHelp" class="tab-btn" title="Sort" href="sort.html">🔀 Sort</a>
 
             <button onclick="window.location.href='arboles.html'" class="redirect-btn">
@@ -37,6 +37,7 @@
                         </div>
                     </div>
                     <button class="dropdown-item" id="northwestBtn">🚚 NorthWest (Transporte)</button>
+                    <button class="dropdown-item" id="analysisDijkstra">🛤️ Dijkstra (Ruta Más Corta)</button>
                 </div>
             </div>
         </div>
@@ -791,5 +792,51 @@
             }
         });
     </script>
+
+    <!-- Dijkstra Modal -->
+    <div id="dijkstraModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🛤️ Algoritmo de Dijkstra</h2>
+                <button class="modal-close" id="closeDijkstraModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Selecciona el nodo inicial para calcular las distancias más cortas:</p>
+                <div id="dijkstraNodeList" class="node-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelDijkstraBtn" class="modal-btn cancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dijkstra Results Modal -->
+    <div id="dijkstraResultsModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2>📊 Resultados de Dijkstra</h2>
+                <button class="modal-close" id="closeDijkstraResultsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="dijkstraResultsContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="closeDijkstraResultsBtn" class="modal-btn">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Ayuda -->
+    <div id="helpModal" class="modal" style="display: none;">
+        <div class="modal-content" style="width: 90%; max-width: 1200px; height: 90vh; max-height: 90vh;">
+            <div class="modal-header">
+                <h2>📘 Ayuda Completa - Sistema de Grafos y Algoritmos</h2>
+                <button id="closeHelpModal" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 0; height: calc(100% - 60px); overflow: hidden;">
+                <iframe id="helpFrame" src="ayuda.html" style="width: 100%; height: 100%; border: none;"></iframe>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
