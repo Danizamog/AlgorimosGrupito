@@ -209,6 +209,7 @@
             height: 250px;
             margin-bottom: 12px;
             border: 1px solid #DDD;
+            position: relative;
         }
 
         .mf-controls {
@@ -292,6 +293,50 @@
             cursor: pointer;
         }
 
+        /* Rule Builder */
+        .rule-builder {
+            background: white;
+            border: 2px solid #0072BD;
+            border-radius: 4px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 500px;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+        }
+
+        .rule-builder-header {
+            background: #0072BD;
+            color: white;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rule-builder-content {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .rule-part {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .rule-connector {
+            font-size: 11px;
+            margin: 0 4px;
+        }
+
         /* Surface Viewer */
         .surface-viewer {
             position: fixed;
@@ -355,7 +400,7 @@
             border-radius: 50%;
             cursor: move;
             z-index: 100;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, 50%);
         }
 
         .draggable-point:hover {
@@ -472,8 +517,11 @@
                                 <input type="text" id="mfParams" class="form-input" value="[0, 0.5, 1]">
                             </div>
                         </div>
-                        <button class="toolbar-btn" onclick="addMembershipFunction()" style="width: 100%;">Add MF</button>
-                        <button class="toolbar-btn" onclick="updateMembershipFunction()" style="width: 100%; margin-top: 4px;">Update MF</button>
+                        <div class="mf-controls">
+                            <button class="toolbar-btn" onclick="addMembershipFunction()" style="width: 100%;">Add MF</button>
+                            <button class="toolbar-btn" onclick="updateMembershipFunction()" style="width: 100%;">Update MF</button>
+                        </div>
+                        <button class="toolbar-btn" onclick="removeMembershipFunction()" style="width: 100%; margin-top: 4px;">Remove MF</button>
                     </div>
                 </div>
 
@@ -483,7 +531,7 @@
                     <div class="rule-content" id="ruleContent">
                         <!-- Rules will be populated here -->
                     </div>
-                    <button class="toolbar-btn" onclick="addRule()" style="margin: 8px;">Add Rule</button>
+                    <button class="toolbar-btn" onclick="openRuleBuilder()" style="margin: 8px;">Add Rule</button>
                 </div>
             </div>
 
@@ -502,6 +550,54 @@
         </div>
         <div class="surface-content">
             <div class="surface-chart" id="surfaceChart"></div>
+        </div>
+    </div>
+
+    <!-- Rule Builder Modal -->
+    <div class="rule-builder" id="ruleBuilder">
+        <div class="rule-builder-header">
+            <span>Rule Builder</span>
+            <button class="close-btn" onclick="closeRuleBuilder()">×</button>
+        </div>
+        <div class="rule-builder-content">
+            <div class="rule-part">
+                <span>IF</span>
+                <select id="ruleInput1" class="form-select">
+                    <!-- Input variables -->
+                </select>
+                <span>IS</span>
+                <select id="ruleMF1" class="form-select">
+                    <!-- Membership functions -->
+                </select>
+            </div>
+            <div class="rule-part">
+                <select id="ruleConnector" class="form-select">
+                    <option value="and">AND</option>
+                    <option value="or">OR</option>
+                </select>
+                <select id="ruleInput2" class="form-select">
+                    <!-- Input variables -->
+                </select>
+                <span>IS</span>
+                <select id="ruleMF2" class="form-select">
+                    <!-- Membership functions -->
+                </select>
+            </div>
+            <div class="rule-part">
+                <span>THEN</span>
+                <select id="ruleOutput" class="form-select">
+                    <!-- Output variables -->
+                </select>
+                <span>IS</span>
+                <select id="ruleOutputMF" class="form-select">
+                    <!-- Membership functions -->
+                </select>
+            </div>
+            <div class="rule-part">
+                <span>Weight:</span>
+                <input type="number" id="ruleWeight" class="form-input" value="1" min="0" max="1" step="0.1">
+            </div>
+            <button class="toolbar-btn" onclick="addRuleFromBuilder()">Add Rule</button>
         </div>
     </div>
 
@@ -643,9 +739,16 @@
                     
                     // Evaluate antecedent
                     for (const condition of rule.antecedent) {
-                        const [varName, mfName] = condition;
+                        const [varName, mfName, connector] = condition;
                         const membership = fuzzified[varName][mfName] || 0;
-                        activation = Math.min(activation, membership);
+                        
+                        if (connector === 'and') {
+                            activation = Math.min(activation, membership);
+                        } else if (connector === 'or') {
+                            activation = Math.max(activation, membership);
+                        } else {
+                            activation = Math.min(activation, membership);
+                        }
                     }
                     
                     ruleOutputs.push({
@@ -727,9 +830,33 @@
         let selectedVariable = null;
         let selectedMF = null;
         let draggablePoints = [];
+        let currentDraggedPoint = null;
 
         // Initialize the application
         function initializeApp() {
+            // Add default variables for demo
+            const input1 = currentFIS.addInputVariable('temperature', [0, 100]);
+            currentFIS.addMembershipFunction(input1, 'cold', 'trimf', [0, 0, 25]);
+            currentFIS.addMembershipFunction(input1, 'warm', 'trimf', [15, 50, 85]);
+            currentFIS.addMembershipFunction(input1, 'hot', 'trimf', [75, 100, 100]);
+            
+            const input2 = currentFIS.addInputVariable('humidity', [0, 100]);
+            currentFIS.addMembershipFunction(input2, 'low', 'trimf', [0, 0, 50]);
+            currentFIS.addMembershipFunction(input2, 'medium', 'trimf', [25, 50, 75]);
+            currentFIS.addMembershipFunction(input2, 'high', 'trimf', [50, 100, 100]);
+            
+            const output1 = currentFIS.addOutputVariable('fan_speed', [0, 100]);
+            currentFIS.addMembershipFunction(output1, 'slow', 'trimf', [0, 0, 50]);
+            currentFIS.addMembershipFunction(output1, 'medium', 'trimf', [25, 50, 75]);
+            currentFIS.addMembershipFunction(output1, 'fast', 'trimf', [50, 100, 100]);
+            
+            // Add a sample rule
+            currentFIS.addRule(
+                [['temperature', 'hot', 'and'], ['humidity', 'high', 'and']],
+                [['fan_speed', 'fast']],
+                1
+            );
+            
             updateFISEditor();
             updateMembershipFunctionEditor();
             updateRuleEditor();
@@ -746,7 +873,7 @@
             
             currentFIS.inputs.forEach((variable, index) => {
                 const item = document.createElement('div');
-                item.className = 'variable-item';
+                item.className = 'variable-item' + (selectedVariable === variable ? ' selected' : '');
                 item.textContent = variable.name + ` [${variable.range[0]}, ${variable.range[1]}]`;
                 item.onclick = () => selectVariable(variable, 'input');
                 inputVars.appendChild(item);
@@ -754,7 +881,7 @@
             
             currentFIS.outputs.forEach((variable, index) => {
                 const item = document.createElement('div');
-                item.className = 'variable-item';
+                item.className = 'variable-item' + (selectedVariable === variable ? ' selected' : '');
                 item.textContent = variable.name + ` [${variable.range[0]}, ${variable.range[1]}]`;
                 item.onclick = () => selectVariable(variable, 'output');
                 outputVars.appendChild(item);
@@ -797,6 +924,8 @@
             if (!selectedVariable) return;
             
             const mfChart = document.getElementById('mfChart');
+            mfChart.innerHTML = ''; // Clear previous chart
+            
             const traces = [];
             const colors = ['#0072BD', '#D95319', '#EDB120', '#7E2F8E', '#77AC30'];
             
@@ -823,9 +952,15 @@
             
             const layout = {
                 title: `Membership Functions: ${selectedVariable.name}`,
-                xaxis: { range: selectedVariable.range },
-                yaxis: { range: [0, 1.1] },
-                margin: { t: 30, r: 30, b: 30, l: 40 },
+                xaxis: { 
+                    range: selectedVariable.range,
+                    title: selectedVariable.name
+                },
+                yaxis: { 
+                    range: [0, 1.1],
+                    title: 'Degree of membership'
+                },
+                margin: { t: 40, r: 30, b: 40, l: 50 },
                 showlegend: true,
                 legend: { x: 0, y: 1 }
             };
@@ -839,7 +974,11 @@
         // Draggable points implementation
         function makePointsDraggable() {
             // Clear existing points
-            draggablePoints.forEach(point => point.remove());
+            draggablePoints.forEach(point => {
+                if (point.parentNode) {
+                    point.parentNode.removeChild(point);
+                }
+            });
             draggablePoints = [];
             
             if (!selectedVariable) return;
@@ -847,27 +986,36 @@
             const mfChart = document.getElementById('mfChart');
             const chartRect = mfChart.getBoundingClientRect();
             
-            // Create points for triangular membership functions
+            // Create points for each membership function
             selectedVariable.membershipFunctions.forEach((mf, mfIndex) => {
-                if (mf.type === 'trimf') {
+                if (mf.type === 'trimf' || mf.type === 'trapmf') {
                     const params = mf.params;
                     const [min, max] = selectedVariable.range;
                     
                     // Create points for each parameter
                     params.forEach((param, paramIndex) => {
                         const x = param;
-                        const y = paramIndex === 1 ? 1 : 0; // Middle point has y=1
+                        let y = 0;
+                        
+                        // For triangular MF, middle point has y=1
+                        if (mf.type === 'trimf' && paramIndex === 1) {
+                            y = 1;
+                        }
+                        // For trapezoidal MF, middle points have y=1
+                        else if (mf.type === 'trapmf' && paramIndex >= 1 && paramIndex <= 2) {
+                            y = 1;
+                        }
                         
                         const point = document.createElement('div');
                         point.className = 'draggable-point';
                         point.style.left = ((x - min) / (max - min) * 100) + '%';
-                        point.style.top = ((1 - y) * 100) + '%';
+                        point.style.bottom = (y * 100) + '%';
                         
                         const label = document.createElement('div');
                         label.className = 'point-label';
-                        label.textContent = `p${paramIndex}`;
+                        label.textContent = mf.name + ' p' + paramIndex;
                         label.style.left = ((x - min) / (max - min) * 100) + '%';
-                        label.style.top = ((1 - y) * 100) + '%';
+                        label.style.bottom = (y * 100 + 5) + '%';
                         
                         point.dataset.mfIndex = mfIndex;
                         point.dataset.paramIndex = paramIndex;
@@ -884,15 +1032,17 @@
 
         function startDrag(e) {
             e.preventDefault();
-            const point = e.target;
-            const mfIndex = parseInt(point.dataset.mfIndex);
-            const paramIndex = parseInt(point.dataset.paramIndex);
+            currentDraggedPoint = e.target;
+            const mfIndex = parseInt(currentDraggedPoint.dataset.mfIndex);
+            const paramIndex = parseInt(currentDraggedPoint.dataset.paramIndex);
             
             const mfChart = document.getElementById('mfChart');
             const chartRect = mfChart.getBoundingClientRect();
             const [min, max] = selectedVariable.range;
             
             function doDrag(e) {
+                if (!currentDraggedPoint) return;
+                
                 const x = ((e.clientX - chartRect.left) / chartRect.width) * (max - min) + min;
                 const clampedX = Math.max(min, Math.min(max, x));
                 
@@ -905,6 +1055,7 @@
             }
             
             function stopDrag() {
+                currentDraggedPoint = null;
                 document.removeEventListener('mousemove', doDrag);
                 document.removeEventListener('mouseup', stopDrag);
             }
@@ -925,13 +1076,19 @@
             const ruleContent = document.getElementById('ruleContent');
             ruleContent.innerHTML = '';
             
+            if (currentFIS.rules.length === 0) {
+                ruleContent.innerHTML = '<div style="text-align: center; padding: 20px; color: #777;">No rules defined</div>';
+                return;
+            }
+            
             currentFIS.rules.forEach((rule, index) => {
                 const ruleItem = document.createElement('div');
                 ruleItem.className = 'rule-item';
                 
-                const antecedentText = rule.antecedent.map(([varName, mfName]) => 
-                    `${varName} is ${mfName}`
-                ).join(' and ');
+                const antecedentText = rule.antecedent.map((condition, i) => {
+                    const [varName, mfName, connector] = condition;
+                    return (i > 0 ? ` ${connector.toUpperCase()} ` : '') + `${varName} is ${mfName}`;
+                }).join('');
                 
                 const consequentText = rule.consequent.map(([varName, mfName]) => 
                     `${varName} is ${mfName}`
@@ -994,6 +1151,14 @@
             setStatus('New FIS created');
         }
 
+        function openFIS() {
+            alert('Open FIS functionality - would load from file in a real implementation');
+        }
+
+        function saveFIS() {
+            alert('Save FIS functionality - would save to file in a real implementation');
+        }
+
         function addVariable(type) {
             const name = prompt(`Enter ${type} variable name:`);
             if (name) {
@@ -1005,6 +1170,7 @@
                 }
                 updateFISEditor();
                 updateMembershipFunctionEditor();
+                updateRuleBuilderDropdowns();
             }
         }
 
@@ -1050,46 +1216,250 @@
             
             const name = document.getElementById('mfName').value;
             const type = document.getElementById('mfType').value;
-            const params = JSON.parse(document.getElementById('mfParams').value);
+            let params;
             
-            currentFIS.addMembershipFunction(selectedVariable, name, type, params);
-            updateMFChart();
-        }
-
-        function updateMembershipFunction() {
-            // Implementation for updating existing MF
-            alert('Select a membership function to update');
-        }
-
-        function addRule() {
-            // Simple rule addition
-            if (currentFIS.inputs.length === 0 || currentFIS.outputs.length === 0) {
-                alert('Need at least one input and output variable');
+            try {
+                params = JSON.parse(document.getElementById('mfParams').value);
+            } catch (e) {
+                alert('Invalid parameters format. Please use JSON array format, e.g., [0, 0.5, 1]');
                 return;
             }
             
-            const antecedent = [[currentFIS.inputs[0].name, currentFIS.inputs[0].membershipFunctions[0]?.name || 'low']];
-            const consequent = [[currentFIS.outputs[0].name, currentFIS.outputs[0].membershipFunctions[0]?.name || 'low']];
+            // Validate parameters based on type
+            if (type === 'trimf' && params.length !== 3) {
+                alert('Triangular MF requires exactly 3 parameters');
+                return;
+            }
+            if (type === 'trapmf' && params.length !== 4) {
+                alert('Trapezoidal MF requires exactly 4 parameters');
+                return;
+            }
+            if (type === 'gaussmf' && params.length !== 2) {
+                alert('Gaussian MF requires exactly 2 parameters');
+                return;
+            }
+            if (type === 'gbellmf' && params.length !== 3) {
+                alert('Generalized bell MF requires exactly 3 parameters');
+                return;
+            }
+            if (type === 'sigmf' && params.length !== 2) {
+                alert('Sigmoidal MF requires exactly 2 parameters');
+                return;
+            }
             
-            currentFIS.addRule(antecedent, consequent);
+            // Check if MF name already exists
+            if (selectedVariable.membershipFunctions.some(mf => mf.name === name)) {
+                alert('Membership function with this name already exists');
+                return;
+            }
+            
+            currentFIS.addMembershipFunction(selectedVariable, name, type, params);
+            updateMFChart();
+            updateRuleBuilderDropdowns();
+            setStatus(`Added membership function '${name}' to variable '${selectedVariable.name}'`);
+        }
+
+        function updateMembershipFunction() {
+            if (!selectedVariable || selectedVariable.membershipFunctions.length === 0) {
+                alert('No membership function to update');
+                return;
+            }
+            
+            const name = document.getElementById('mfName').value;
+            const type = document.getElementById('mfType').value;
+            let params;
+            
+            try {
+                params = JSON.parse(document.getElementById('mfParams').value);
+            } catch (e) {
+                alert('Invalid parameters format. Please use JSON array format, e.g., [0, 0.5, 1]');
+                return;
+            }
+            
+            // Find the MF to update
+            const mfIndex = selectedVariable.membershipFunctions.findIndex(mf => mf.name === name);
+            if (mfIndex === -1) {
+                alert(`Membership function '${name}' not found`);
+                return;
+            }
+            
+            // Update the MF
+            selectedVariable.membershipFunctions[mfIndex].type = type;
+            selectedVariable.membershipFunctions[mfIndex].params = params;
+            
+            updateMFChart();
+            setStatus(`Updated membership function '${name}'`);
+        }
+
+        function removeMembershipFunction() {
+            if (!selectedVariable || selectedVariable.membershipFunctions.length === 0) {
+                alert('No membership function to remove');
+                return;
+            }
+            
+            const name = document.getElementById('mfName').value;
+            
+            // Find the MF to remove
+            const mfIndex = selectedVariable.membershipFunctions.findIndex(mf => mf.name === name);
+            if (mfIndex === -1) {
+                alert(`Membership function '${name}' not found`);
+                return;
+            }
+            
+            if (confirm(`Remove membership function '${name}'?`)) {
+                currentFIS.removeMembershipFunction(selectedVariable, name);
+                updateMFChart();
+                updateRuleBuilderDropdowns();
+                setStatus(`Removed membership function '${name}'`);
+            }
+        }
+
+        function openRuleBuilder() {
+            if (currentFIS.inputs.length === 0 || currentFIS.outputs.length === 0) {
+                alert('Need at least one input and output variable to create rules');
+                return;
+            }
+            
+            updateRuleBuilderDropdowns();
+            document.getElementById('ruleBuilder').style.display = 'flex';
+        }
+
+        function closeRuleBuilder() {
+            document.getElementById('ruleBuilder').style.display = 'none';
+        }
+
+        function updateRuleBuilderDropdowns() {
+            const input1 = document.getElementById('ruleInput1');
+            const input2 = document.getElementById('ruleInput2');
+            const output = document.getElementById('ruleOutput');
+            
+            input1.innerHTML = '';
+            input2.innerHTML = '';
+            output.innerHTML = '';
+            
+            // Populate input variables
+            currentFIS.inputs.forEach(variable => {
+                const option1 = document.createElement('option');
+                option1.value = variable.name;
+                option1.textContent = variable.name;
+                input1.appendChild(option1);
+                
+                const option2 = document.createElement('option');
+                option2.value = variable.name;
+                option2.textContent = variable.name;
+                input2.appendChild(option2);
+            });
+            
+            // Populate output variables
+            currentFIS.outputs.forEach(variable => {
+                const option = document.createElement('option');
+                option.value = variable.name;
+                option.textContent = variable.name;
+                output.appendChild(option);
+            });
+            
+            // Update membership function dropdowns
+            updateRuleMFDropdowns();
+        }
+
+        function updateRuleMFDropdowns() {
+            const input1 = document.getElementById('ruleInput1').value;
+            const input2 = document.getElementById('ruleInput2').value;
+            const output = document.getElementById('ruleOutput').value;
+            
+            const mf1 = document.getElementById('ruleMF1');
+            const mf2 = document.getElementById('ruleMF2');
+            const outputMF = document.getElementById('ruleOutputMF');
+            
+            mf1.innerHTML = '';
+            mf2.innerHTML = '';
+            outputMF.innerHTML = '';
+            
+            // Find the selected variables
+            const inputVar1 = currentFIS.inputs.find(v => v.name === input1);
+            const inputVar2 = currentFIS.inputs.find(v => v.name === input2);
+            const outputVar = currentFIS.outputs.find(v => v.name === output);
+            
+            // Populate membership functions
+            if (inputVar1) {
+                inputVar1.membershipFunctions.forEach(mf => {
+                    const option = document.createElement('option');
+                    option.value = mf.name;
+                    option.textContent = mf.name;
+                    mf1.appendChild(option);
+                });
+            }
+            
+            if (inputVar2) {
+                inputVar2.membershipFunctions.forEach(mf => {
+                    const option = document.createElement('option');
+                    option.value = mf.name;
+                    option.textContent = mf.name;
+                    mf2.appendChild(option);
+                });
+            }
+            
+            if (outputVar) {
+                outputVar.membershipFunctions.forEach(mf => {
+                    const option = document.createElement('option');
+                    option.value = mf.name;
+                    option.textContent = mf.name;
+                    outputMF.appendChild(option);
+                });
+            }
+        }
+
+        function addRuleFromBuilder() {
+            const input1 = document.getElementById('ruleInput1').value;
+            const mf1 = document.getElementById('ruleMF1').value;
+            const connector = document.getElementById('ruleConnector').value;
+            const input2 = document.getElementById('ruleInput2').value;
+            const mf2 = document.getElementById('ruleMF2').value;
+            const output = document.getElementById('ruleOutput').value;
+            const outputMF = document.getElementById('ruleOutputMF').value;
+            const weight = parseFloat(document.getElementById('ruleWeight').value);
+            
+            if (!input1 || !mf1 || !input2 || !mf2 || !output || !outputMF) {
+                alert('Please fill all rule fields');
+                return;
+            }
+            
+            const antecedent = [
+                [input1, mf1, 'and'],
+                [input2, mf2, connector]
+            ];
+            
+            const consequent = [
+                [output, outputMF]
+            ];
+            
+            currentFIS.addRule(antecedent, consequent, weight);
             updateRuleEditor();
+            closeRuleBuilder();
+            setStatus('Rule added successfully');
         }
 
         function editRule(index) {
             // Implementation for rule editing
-            alert('Edit rule functionality');
+            alert('Edit rule functionality - would open rule builder with existing values');
         }
 
         function deleteRule(index) {
             if (confirm('Delete this rule?')) {
                 currentFIS.removeRule(index);
                 updateRuleEditor();
+                setStatus('Rule deleted');
             }
         }
 
         function showSurfaceViewer() {
             if (currentFIS.inputs.length < 2) {
                 alert('Need at least two input variables for surface plot');
+                return;
+            }
+            
+            if (currentFIS.outputs.length === 0) {
+                alert('Need at least one output variable for surface plot');
                 return;
             }
             
@@ -1123,12 +1493,17 @@
         }
 
         function showRuleViewer() {
-            alert('Rule Viewer functionality');
+            alert('Rule Viewer functionality - would show rule evaluation in a separate window');
         }
 
         function evaluateFIS() {
-            // Simple evaluation
-            const results = currentFIS.evaluate({});
+            // Simple evaluation with default values
+            const inputValues = {};
+            currentFIS.inputs.forEach(input => {
+                inputValues[input.name] = input.value;
+            });
+            
+            const results = currentFIS.evaluate(inputValues);
             setStatus(`System evaluated. Outputs: ${JSON.stringify(results)}`);
         }
 
@@ -1142,7 +1517,8 @@
                 infoDiv.innerHTML = `
                     <div><strong>Name:</strong> ${selectedVariable.name}</div>
                     <div><strong>Range:</strong> [${selectedVariable.range.join(', ')}]</div>
-                    <div><strong>Type:</strong> ${selectedVariable.membershipFunctions.length > 0 ? selectedVariable.membershipFunctions[0].type : 'No MF'}</div>
+                    <div><strong>MFs:</strong> ${selectedVariable.membershipFunctions.length}</div>
+                    <div><strong>Current Value:</strong> ${selectedVariable.value.toFixed(2)}</div>
                 `;
             } else {
                 infoDiv.innerHTML = '<div>No variable selected</div>';
@@ -1157,6 +1533,7 @@
                 <div><strong>AND Method:</strong> ${currentFIS.andMethod}</div>
                 <div><strong>OR Method:</strong> ${currentFIS.orMethod}</div>
                 <div><strong>Defuzz Method:</strong> ${currentFIS.defuzzMethod}</div>
+                <div><strong>Rules:</strong> ${currentFIS.rules.length}</div>
             `;
         }
 
@@ -1171,6 +1548,11 @@
                 this.value = '';
             }
         });
+
+        // Update MF dropdowns when inputs change in rule builder
+        document.getElementById('ruleInput1').addEventListener('change', updateRuleMFDropdowns);
+        document.getElementById('ruleInput2').addEventListener('change', updateRuleMFDropdowns);
+        document.getElementById('ruleOutput').addEventListener('change', updateRuleMFDropdowns);
 
         // Initialize the application
         window.onload = initializeApp;
