@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuzzy Logic Toolbox</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background: #F0F0F0;
+            color: #333;
+            overflow: hidden;
+        }
+
+        .matlab-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Command Window */
+        .command-window {
+            width: 300px;
+            background: black;
+            color: #00FF00;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid #0072BD;
+        }
+
+        .command-header {
+            background: #0072BD;
+            color: white;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .command-output {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .command-input {
+            display: flex;
+            padding: 8px;
+            background: #2C2C2C;
+        }
+
+        .command-input input {
+            flex: 1;
+            background: transparent;
+            border: 1px solid #555;
+            color: #00FF00;
+            padding: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        /* Main Workspace */
+        .main-workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            background: #E8E8E8;
+            padding: 6px 10px;
+            border-bottom: 1px solid #BBB;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-btn {
+            padding: 6px 10px;
+            background: #0072BD;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .toolbar-btn:hover {
+            background: #005A9E;
+        }
+
+        .toolbar-separator {
+            width: 1px;
+            height: 16px;
+            background: #999;
+            margin: 0 4px;
+        }
+
+        /* Editor Area */
+        .editor-area {
+            flex: 1;
+            display: flex;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        /* FIS Editor */
+        .fis-editor {
+            flex: 1;
+            background: white;
+            border: 2px solid #0072BD;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .fis-header {
+            background: #0072BD;
+            color: white;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .fis-content {
+            flex: 1;
+            padding: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .fis-section {
+            border: 1px solid #CCC;
+            padding: 12px;
+            border-radius: 3px;
+        }
+
+        .fis-section h3 {
+            color: #0072BD;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .variable-list {
+            max-height: 150px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        .variable-item {
+            padding: 6px;
+            margin: 2px 0;
+            background: #F5F5F5;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 11px;
+            border-left: 3px solid #0072BD;
+        }
+
+        .variable-item:hover {
+            background: #E8E8E8;
+        }
+
+        .variable-item.selected {
+            background: #4DBEEE;
+            color: white;
+        }
+
+        /* Membership Function Editor */
+        .mf-editor {
+            width: 500px;
+            background: white;
+            border: 2px solid #0072BD;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mf-header {
+            background: #0072BD;
+            color: white;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .mf-content {
+            flex: 1;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mf-chart {
+            height: 250px;
+            margin-bottom: 12px;
+            border: 1px solid #DDD;
+        }
+
+        .mf-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .control-group label {
+            font-size: 11px;
+            color: #333;
+        }
+
+        .form-input, .form-select {
+            padding: 4px 6px;
+            border: 1px solid #CCC;
+            border-radius: 2px;
+            font-size: 11px;
+        }
+
+        .param-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        /* Rule Editor */
+        .rule-editor {
+            width: 400px;
+            background: white;
+            border: 2px solid #0072BD;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .rule-header {
+            background: #0072BD;
+            color: white;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .rule-content {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+        }
+
+        .rule-item {
+            background: #F9F9F9;
+            padding: 8px;
+            margin-bottom: 6px;
+            border-radius: 2px;
+            border-left: 3px solid #77AC30;
+        }
+
+        .rule-text {
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+
+        .rule-controls {
+            display: flex;
+            gap: 4px;
+        }
+
+        .rule-controls button {
+            padding: 2px 6px;
+            font-size: 10px;
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        /* Surface Viewer */
+        .surface-viewer {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            background: white;
+            border: 3px solid #0072BD;
+            border-radius: 4px;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+        }
+
+        .surface-header {
+            background: #0072BD;
+            color: white;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .surface-content {
+            flex: 1;
+            padding: 12px;
+        }
+
+        .surface-chart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background: #0072BD;
+            color: white;
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+
+        /* Draggable Points */
+        .draggable-point {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #D95319;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: move;
+            z-index: 100;
+            transform: translate(-50%, -50%);
+        }
+
+        .draggable-point:hover {
+            background: #A2142F;
+        }
+
+        .point-label {
+            position: absolute;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-size: 9px;
+            pointer-events: none;
+            z-index: 101;
+            transform: translateY(-15px);
+        }
+    </style>
+</head>
+<body>
+    <div class="matlab-container">
+        <!-- Command Window -->
+        <div class="command-window">
+            <div class="command-header">Command Window</div>
+            <div class="command-output" id="commandOutput">
+                <div>>> Fuzzy Logic Toolbox</div>
+                <div>>> Type commands to manage fuzzy inference system</div>
+            </div>
+            <div class="command-input">
+                <input type="text" id="commandInput" placeholder="Enter command...">
+            </div>
+        </div>
+
+        <!-- Main Workspace -->
+        <div class="main-workspace">
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <button class="toolbar-btn" onclick="newFIS()">New FIS</button>
+                <button class="toolbar-btn" onclick="openFIS()">Open FIS</button>
+                <button class="toolbar-btn" onclick="saveFIS()">Save FIS</button>
+                <div class="toolbar-separator"></div>
+                <button class="toolbar-btn" onclick="addVariable('input')">Add Input</button>
+                <button class="toolbar-btn" onclick="addVariable('output')">Add Output</button>
+                <div class="toolbar-separator"></div>
+                <button class="toolbar-btn" onclick="showSurfaceViewer()">Surface View</button>
+                <button class="toolbar-btn" onclick="showRuleViewer()">Rule View</button>
+                <div class="toolbar-separator"></div>
+                <button class="toolbar-btn" onclick="evaluateFIS()">Evaluate</button>
+            </div>
+
+            <!-- Editor Area -->
+            <div class="editor-area">
+                <!-- FIS Editor -->
+                <div class="fis-editor">
+                    <div class="fis-header">FIS Editor</div>
+                    <div class="fis-content">
+                        <div class="fis-section">
+                            <h3>Input Variables</h3>
+                            <div class="variable-list" id="inputVariables">
+                                <!-- Input variables will be populated here -->
+                            </div>
+                            <button class="toolbar-btn" onclick="addVariable('input')" style="width: 100%; margin-top: 8px;">Add Input</button>
+                        </div>
+                        <div class="fis-section">
+                            <h3>Output Variables</h3>
+                            <div class="variable-list" id="outputVariables">
+                                <!-- Output variables will be populated here -->
+                            </div>
+                            <button class="toolbar-btn" onclick="addVariable('output')" style="width: 100%; margin-top: 8px;">Add Output</button>
+                        </div>
+                        <div class="fis-section">
+                            <h3>Current Variable</h3>
+                            <div id="currentVariableInfo" style="font-size: 11px;">
+                                <!-- Current variable info -->
+                            </div>
+                        </div>
+                        <div class="fis-section">
+                            <h3>FIS Properties</h3>
+                            <div id="fisProperties" style="font-size: 11px;">
+                                <!-- FIS properties -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Membership Function Editor -->
+                <div class="mf-editor">
+                    <div class="mf-header">Membership Function Editor</div>
+                    <div class="mf-content">
+                        <div class="mf-chart" id="mfChart"></div>
+                        <div class="mf-controls">
+                            <div class="control-group">
+                                <label>Variable</label>
+                                <select id="variableSelect" class="form-select" onchange="changeVariable()">
+                                    <!-- Options will be populated dynamically -->
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label>Type</label>
+                                <select id="mfType" class="form-select" onchange="changeMFType()">
+                                    <option value="trimf">trimf</option>
+                                    <option value="trapmf">trapmf</option>
+                                    <option value="gaussmf">gaussmf</option>
+                                    <option value="gbellmf">gbellmf</option>
+                                    <option value="sigmf">sigmf</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label>Name</label>
+                                <input type="text" id="mfName" class="form-input" value="mf1">
+                            </div>
+                            <div class="control-group">
+                                <label>Params</label>
+                                <input type="text" id="mfParams" class="form-input" value="[0, 0.5, 1]">
+                            </div>
+                        </div>
+                        <button class="toolbar-btn" onclick="addMembershipFunction()" style="width: 100%;">Add MF</button>
+                        <button class="toolbar-btn" onclick="updateMembershipFunction()" style="width: 100%; margin-top: 4px;">Update MF</button>
+                    </div>
+                </div>
+
+                <!-- Rule Editor -->
+                <div class="rule-editor">
+                    <div class="rule-header">Rule Editor</div>
+                    <div class="rule-content" id="ruleContent">
+                        <!-- Rules will be populated here -->
+                    </div>
+                    <button class="toolbar-btn" onclick="addRule()" style="margin: 8px;">Add Rule</button>
+                </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="status-bar" id="statusBar">
+                Ready
+            </div>
+        </div>
+    </div>
+
+    <!-- Surface Viewer Modal -->
+    <div class="surface-viewer" id="surfaceViewer">
+        <div class="surface-header">
+            <span>Surface Viewer</span>
+            <button class="close-btn" onclick="closeSurfaceViewer()">×</button>
+        </div>
+        <div class="surface-content">
+            <div class="surface-chart" id="surfaceChart"></div>
+        </div>
+    </div>
+
+    <script>
+        // Fuzzy Logic System Implementation
+        class FuzzyInferenceSystem {
+            constructor(name = 'fuzzy_system') {
+                this.name = name;
+                this.type = 'mamdani';
+                this.andMethod = 'min';
+                this.orMethod = 'max';
+                this.defuzzMethod = 'centroid';
+                this.impMethod = 'min';
+                this.aggMethod = 'max';
+                this.inputs = [];
+                this.outputs = [];
+                this.rules = [];
+            }
+
+            addInputVariable(name, range = [0, 10]) {
+                const variable = {
+                    name: name,
+                    range: range,
+                    membershipFunctions: [],
+                    value: (range[0] + range[1]) / 2
+                };
+                this.inputs.push(variable);
+                return variable;
+            }
+
+            addOutputVariable(name, range = [0, 10]) {
+                const variable = {
+                    name: name,
+                    range: range,
+                    membershipFunctions: [],
+                    value: 0
+                };
+                this.outputs.push(variable);
+                return variable;
+            }
+
+            addMembershipFunction(variable, name, type, params) {
+                const mf = {
+                    name: name,
+                    type: type,
+                    params: params
+                };
+                variable.membershipFunctions.push(mf);
+                return mf;
+            }
+
+            removeMembershipFunction(variable, mfName) {
+                variable.membershipFunctions = variable.membershipFunctions.filter(mf => mf.name !== mfName);
+            }
+
+            addRule(antecedent, consequent, weight = 1) {
+                const rule = {
+                    antecedent: antecedent,
+                    consequent: consequent,
+                    weight: weight
+                };
+                this.rules.push(rule);
+                return rule;
+            }
+
+            removeRule(ruleIndex) {
+                this.rules.splice(ruleIndex, 1);
+            }
+
+            // Membership function calculations
+            calculateMembership(x, mf) {
+                switch (mf.type) {
+                    case 'trimf':
+                        return this.trimf(x, ...mf.params);
+                    case 'trapmf':
+                        return this.trapmf(x, ...mf.params);
+                    case 'gaussmf':
+                        return this.gaussmf(x, ...mf.params);
+                    case 'gbellmf':
+                        return this.gbellmf(x, ...mf.params);
+                    case 'sigmf':
+                        return this.sigmf(x, ...mf.params);
+                    default:
+                        return 0;
+                }
+            }
+
+            trimf(x, a, b, c) {
+                if (x <= a || x >= c) return 0;
+                if (x === b) return 1;
+                if (x < b) return (x - a) / (b - a);
+                return (c - x) / (c - b);
+            }
+
+            trapmf(x, a, b, c, d) {
+                if (x <= a || x >= d) return 0;
+                if (x >= b && x <= c) return 1;
+                if (x > a && x < b) return (x - a) / (b - a);
+                if (x > c && x < d) return (d - x) / (d - c);
+                return 0;
+            }
+
+            gaussmf(x, mean, sigma) {
+                return Math.exp(-Math.pow((x - mean) / sigma, 2) / 2);
+            }
+
+            gbellmf(x, a, b, c) {
+                return 1 / (1 + Math.pow(Math.abs((x - c) / a), 2 * b));
+            }
+
+            sigmf(x, a, c) {
+                return 1 / (1 + Math.exp(-a * (x - c)));
+            }
+
+            // Fuzzification
+            fuzzify(variable, value) {
+                const memberships = {};
+                for (const mf of variable.membershipFunctions) {
+                    memberships[mf.name] = this.calculateMembership(value, mf);
+                }
+                return memberships;
+            }
+
+            // Inference and defuzzification
+            evaluate(inputValues) {
+                // Fuzzification
+                const fuzzified = {};
+                for (const inputVar of this.inputs) {
+                    if (inputValues[inputVar.name] !== undefined) {
+                        inputVar.value = inputValues[inputVar.name];
+                    }
+                    fuzzified[inputVar.name] = this.fuzzify(inputVar, inputVar.value);
+                }
+
+                // Rule evaluation
+                const ruleOutputs = [];
+                for (const rule of this.rules) {
+                    let activation = 1;
+                    
+                    // Evaluate antecedent
+                    for (const condition of rule.antecedent) {
+                        const [varName, mfName] = condition;
+                        const membership = fuzzified[varName][mfName] || 0;
+                        activation = Math.min(activation, membership);
+                    }
+                    
+                    ruleOutputs.push({
+                        activation: activation * rule.weight,
+                        consequent: rule.consequent
+                    });
+                }
+
+                // Aggregation and defuzzification
+                const results = {};
+                for (const outputVar of this.outputs) {
+                    results[outputVar.name] = this.defuzzify(outputVar, ruleOutputs);
+                    outputVar.value = results[outputVar.name];
+                }
+
+                return results;
+            }
+
+            defuzzify(variable, ruleOutputs) {
+                const [min, max] = variable.range;
+                const step = (max - min) / 100;
+                
+                let numerator = 0;
+                let denominator = 0;
+                
+                for (let x = min; x <= max; x += step) {
+                    let membership = 0;
+                    
+                    for (const ruleOutput of ruleOutputs) {
+                        for (const [varName, mfName] of ruleOutput.consequent) {
+                            if (varName === variable.name) {
+                                const mf = variable.membershipFunctions.find(m => m.name === mfName);
+                                if (mf) {
+                                    const mfValue = this.calculateMembership(x, mf);
+                                    membership = Math.max(membership, Math.min(ruleOutput.activation, mfValue));
+                                }
+                            }
+                        }
+                    }
+                    
+                    numerator += x * membership;
+                    denominator += membership;
+                }
+                
+                return denominator > 0 ? numerator / denominator : (min + max) / 2;
+            }
+
+            // Generate surface data for 3D plot
+            generateSurfaceData(inputX, inputY, output, resolution = 20) {
+                const x = [], y = [], z = [];
+                const [xMin, xMax] = inputX.range;
+                const [yMin, yMax] = inputY.range;
+                
+                for (let i = 0; i <= resolution; i++) {
+                    const xVal = xMin + (xMax - xMin) * i / resolution;
+                    x.push(xVal);
+                    const row = [];
+                    
+                    for (let j = 0; j <= resolution; j++) {
+                        const yVal = yMin + (yMax - yMin) * j / resolution;
+                        y.push(yVal);
+                        
+                        const result = this.evaluate({
+                            [inputX.name]: xVal,
+                            [inputY.name]: yVal
+                        });
+                        
+                        row.push(result[output.name] || 0);
+                    }
+                    z.push(row);
+                }
+                
+                return { x, y, z };
+            }
+        }
+
+        // Global FIS instance
+        let currentFIS = new FuzzyInferenceSystem();
+        let selectedVariable = null;
+        let selectedMF = null;
+        let draggablePoints = [];
+
+        // Initialize the application
+        function initializeApp() {
+            updateFISEditor();
+            updateMembershipFunctionEditor();
+            updateRuleEditor();
+            setStatus('Fuzzy Logic System Ready');
+        }
+
+        // Update FIS Editor
+        function updateFISEditor() {
+            const inputVars = document.getElementById('inputVariables');
+            const outputVars = document.getElementById('outputVariables');
+            
+            inputVars.innerHTML = '';
+            outputVars.innerHTML = '';
+            
+            currentFIS.inputs.forEach((variable, index) => {
+                const item = document.createElement('div');
+                item.className = 'variable-item';
+                item.textContent = variable.name + ` [${variable.range[0]}, ${variable.range[1]}]`;
+                item.onclick = () => selectVariable(variable, 'input');
+                inputVars.appendChild(item);
+            });
+            
+            currentFIS.outputs.forEach((variable, index) => {
+                const item = document.createElement('div');
+                item.className = 'variable-item';
+                item.textContent = variable.name + ` [${variable.range[0]}, ${variable.range[1]}]`;
+                item.onclick = () => selectVariable(variable, 'output');
+                outputVars.appendChild(item);
+            });
+            
+            updateCurrentVariableInfo();
+            updateFISProperties();
+        }
+
+        // Update Membership Function Editor
+        function updateMembershipFunctionEditor() {
+            const variableSelect = document.getElementById('variableSelect');
+            variableSelect.innerHTML = '';
+            
+            currentFIS.inputs.forEach(variable => {
+                const option = document.createElement('option');
+                option.value = variable.name;
+                option.textContent = variable.name + ' (input)';
+                variableSelect.appendChild(option);
+            });
+            
+            currentFIS.outputs.forEach(variable => {
+                const option = document.createElement('option');
+                option.value = variable.name;
+                option.textContent = variable.name + ' (output)';
+                variableSelect.appendChild(option);
+            });
+            
+            if (currentFIS.inputs.length > 0 && !selectedVariable) {
+                variableSelect.value = currentFIS.inputs[0].name;
+                changeVariable();
+            } else if (selectedVariable) {
+                variableSelect.value = selectedVariable.name;
+            }
+            
+            updateMFChart();
+        }
+
+        function updateMFChart() {
+            if (!selectedVariable) return;
+            
+            const mfChart = document.getElementById('mfChart');
+            const traces = [];
+            const colors = ['#0072BD', '#D95319', '#EDB120', '#7E2F8E', '#77AC30'];
+            
+            selectedVariable.membershipFunctions.forEach((mf, index) => {
+                const x = [];
+                const y = [];
+                const [min, max] = selectedVariable.range;
+                const step = (max - min) / 100;
+                
+                for (let i = min; i <= max; i += step) {
+                    x.push(i);
+                    y.push(currentFIS.calculateMembership(i, mf));
+                }
+                
+                traces.push({
+                    x: x,
+                    y: y,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: mf.name,
+                    line: { color: colors[index % colors.length], width: 2 }
+                });
+            });
+            
+            const layout = {
+                title: `Membership Functions: ${selectedVariable.name}`,
+                xaxis: { range: selectedVariable.range },
+                yaxis: { range: [0, 1.1] },
+                margin: { t: 30, r: 30, b: 30, l: 40 },
+                showlegend: true,
+                legend: { x: 0, y: 1 }
+            };
+            
+            Plotly.newPlot(mfChart, traces, layout, { displayModeBar: false });
+            
+            // Add draggable points
+            makePointsDraggable();
+        }
+
+        // Draggable points implementation
+        function makePointsDraggable() {
+            // Clear existing points
+            draggablePoints.forEach(point => point.remove());
+            draggablePoints = [];
+            
+            if (!selectedVariable) return;
+            
+            const mfChart = document.getElementById('mfChart');
+            const chartRect = mfChart.getBoundingClientRect();
+            
+            // Create points for triangular membership functions
+            selectedVariable.membershipFunctions.forEach((mf, mfIndex) => {
+                if (mf.type === 'trimf') {
+                    const params = mf.params;
+                    const [min, max] = selectedVariable.range;
+                    
+                    // Create points for each parameter
+                    params.forEach((param, paramIndex) => {
+                        const x = param;
+                        const y = paramIndex === 1 ? 1 : 0; // Middle point has y=1
+                        
+                        const point = document.createElement('div');
+                        point.className = 'draggable-point';
+                        point.style.left = ((x - min) / (max - min) * 100) + '%';
+                        point.style.top = ((1 - y) * 100) + '%';
+                        
+                        const label = document.createElement('div');
+                        label.className = 'point-label';
+                        label.textContent = `p${paramIndex}`;
+                        label.style.left = ((x - min) / (max - min) * 100) + '%';
+                        label.style.top = ((1 - y) * 100) + '%';
+                        
+                        point.dataset.mfIndex = mfIndex;
+                        point.dataset.paramIndex = paramIndex;
+                        
+                        point.addEventListener('mousedown', startDrag);
+                        
+                        mfChart.appendChild(point);
+                        mfChart.appendChild(label);
+                        draggablePoints.push(point, label);
+                    });
+                }
+            });
+        }
+
+        function startDrag(e) {
+            e.preventDefault();
+            const point = e.target;
+            const mfIndex = parseInt(point.dataset.mfIndex);
+            const paramIndex = parseInt(point.dataset.paramIndex);
+            
+            const mfChart = document.getElementById('mfChart');
+            const chartRect = mfChart.getBoundingClientRect();
+            const [min, max] = selectedVariable.range;
+            
+            function doDrag(e) {
+                const x = ((e.clientX - chartRect.left) / chartRect.width) * (max - min) + min;
+                const clampedX = Math.max(min, Math.min(max, x));
+                
+                // Update parameter
+                selectedVariable.membershipFunctions[mfIndex].params[paramIndex] = clampedX;
+                
+                // Update display
+                updateMFChart();
+                updateParameterDisplay();
+            }
+            
+            function stopDrag() {
+                document.removeEventListener('mousemove', doDrag);
+                document.removeEventListener('mouseup', stopDrag);
+            }
+            
+            document.addEventListener('mousemove', doDrag);
+            document.addEventListener('mouseup', stopDrag);
+        }
+
+        function updateParameterDisplay() {
+            if (selectedVariable && selectedVariable.membershipFunctions.length > 0) {
+                const mf = selectedVariable.membershipFunctions[0]; // Show first MF params
+                document.getElementById('mfParams').value = JSON.stringify(mf.params);
+            }
+        }
+
+        // Update Rule Editor
+        function updateRuleEditor() {
+            const ruleContent = document.getElementById('ruleContent');
+            ruleContent.innerHTML = '';
+            
+            currentFIS.rules.forEach((rule, index) => {
+                const ruleItem = document.createElement('div');
+                ruleItem.className = 'rule-item';
+                
+                const antecedentText = rule.antecedent.map(([varName, mfName]) => 
+                    `${varName} is ${mfName}`
+                ).join(' and ');
+                
+                const consequentText = rule.consequent.map(([varName, mfName]) => 
+                    `${varName} is ${mfName}`
+                ).join(' and ');
+                
+                ruleItem.innerHTML = `
+                    <div class="rule-text">If ${antecedentText} then ${consequentText} (weight: ${rule.weight})</div>
+                    <div class="rule-controls">
+                        <button onclick="editRule(${index})">Edit</button>
+                        <button onclick="deleteRule(${index})">Delete</button>
+                    </div>
+                `;
+                
+                ruleContent.appendChild(ruleItem);
+            });
+        }
+
+        // Command Window Functions
+        function executeCommand(command) {
+            const output = document.getElementById('commandOutput');
+            output.innerHTML += `<div>>> ${command}</div>`;
+            
+            // Simple command parsing
+            const parts = command.toLowerCase().split(' ');
+            
+            switch(parts[0]) {
+                case 'help':
+                    output.innerHTML += `<div>Available commands: newfis, addvar, addmf, showfis, showrule</div>`;
+                    break;
+                case 'newfis':
+                    newFIS();
+                    output.innerHTML += `<div>Created new FIS</div>`;
+                    break;
+                case 'addvar':
+                    if (parts[1] === 'input') {
+                        addVariable('input');
+                    } else if (parts[1] === 'output') {
+                        addVariable('output');
+                    }
+                    break;
+                case 'showfis':
+                    output.innerHTML += `<div>FIS: ${currentFIS.name}</div>`;
+                    output.innerHTML += `<div>Inputs: ${currentFIS.inputs.map(v => v.name).join(', ')}</div>`;
+                    output.innerHTML += `<div>Outputs: ${currentFIS.outputs.map(v => v.name).join(', ')}</div>`;
+                    break;
+                default:
+                    output.innerHTML += `<div>Unknown command: ${parts[0]}</div>`;
+            }
+            
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // Toolbar Functions
+        function newFIS() {
+            currentFIS = new FuzzyInferenceSystem();
+            selectedVariable = null;
+            updateFISEditor();
+            updateMembershipFunctionEditor();
+            updateRuleEditor();
+            setStatus('New FIS created');
+        }
+
+        function addVariable(type) {
+            const name = prompt(`Enter ${type} variable name:`);
+            if (name) {
+                const range = [0, 10]; // Default range
+                if (type === 'input') {
+                    currentFIS.addInputVariable(name, range);
+                } else {
+                    currentFIS.addOutputVariable(name, range);
+                }
+                updateFISEditor();
+                updateMembershipFunctionEditor();
+            }
+        }
+
+        function selectVariable(variable, type) {
+            selectedVariable = variable;
+            updateFISEditor();
+            updateMembershipFunctionEditor();
+        }
+
+        function changeVariable() {
+            const varName = document.getElementById('variableSelect').value;
+            selectedVariable = [...currentFIS.inputs, ...currentFIS.outputs].find(v => v.name === varName);
+            updateMFChart();
+        }
+
+        function changeMFType() {
+            const mfType = document.getElementById('mfType').value;
+            // Update parameters based on type
+            switch(mfType) {
+                case 'trimf':
+                    document.getElementById('mfParams').value = '[0, 0.5, 1]';
+                    break;
+                case 'trapmf':
+                    document.getElementById('mfParams').value = '[0, 0.3, 0.7, 1]';
+                    break;
+                case 'gaussmf':
+                    document.getElementById('mfParams').value = '[0.5, 0.2]';
+                    break;
+                case 'gbellmf':
+                    document.getElementById('mfParams').value = '[0.2, 2, 0.5]';
+                    break;
+                case 'sigmf':
+                    document.getElementById('mfParams').value = '[2, 0.5]';
+                    break;
+            }
+        }
+
+        function addMembershipFunction() {
+            if (!selectedVariable) {
+                alert('Please select a variable first');
+                return;
+            }
+            
+            const name = document.getElementById('mfName').value;
+            const type = document.getElementById('mfType').value;
+            const params = JSON.parse(document.getElementById('mfParams').value);
+            
+            currentFIS.addMembershipFunction(selectedVariable, name, type, params);
+            updateMFChart();
+        }
+
+        function updateMembershipFunction() {
+            // Implementation for updating existing MF
+            alert('Select a membership function to update');
+        }
+
+        function addRule() {
+            // Simple rule addition
+            if (currentFIS.inputs.length === 0 || currentFIS.outputs.length === 0) {
+                alert('Need at least one input and output variable');
+                return;
+            }
+            
+            const antecedent = [[currentFIS.inputs[0].name, currentFIS.inputs[0].membershipFunctions[0]?.name || 'low']];
+            const consequent = [[currentFIS.outputs[0].name, currentFIS.outputs[0].membershipFunctions[0]?.name || 'low']];
+            
+            currentFIS.addRule(antecedent, consequent);
+            updateRuleEditor();
+        }
+
+        function editRule(index) {
+            // Implementation for rule editing
+            alert('Edit rule functionality');
+        }
+
+        function deleteRule(index) {
+            if (confirm('Delete this rule?')) {
+                currentFIS.removeRule(index);
+                updateRuleEditor();
+            }
+        }
+
+        function showSurfaceViewer() {
+            if (currentFIS.inputs.length < 2) {
+                alert('Need at least two input variables for surface plot');
+                return;
+            }
+            
+            const surfaceViewer = document.getElementById('surfaceViewer');
+            surfaceViewer.style.display = 'flex';
+            
+            const input1 = currentFIS.inputs[0];
+            const input2 = currentFIS.inputs[1];
+            const output = currentFIS.outputs[0];
+            
+            const surfaceData = currentFIS.generateSurfaceData(input1, input2, output);
+            
+            const trace = {
+                x: surfaceData.x,
+                y: surfaceData.y,
+                z: surfaceData.z,
+                type: 'surface',
+                colorscale: 'Viridis'
+            };
+            
+            const layout = {
+                title: `Surface: ${output.name} = f(${input1.name}, ${input2.name})`,
+                scene: {
+                    xaxis: { title: input1.name },
+                    yaxis: { title: input2.name },
+                    zaxis: { title: output.name }
+                }
+            };
+            
+            Plotly.newPlot('surfaceChart', [trace], layout);
+        }
+
+        function showRuleViewer() {
+            alert('Rule Viewer functionality');
+        }
+
+        function evaluateFIS() {
+            // Simple evaluation
+            const results = currentFIS.evaluate({});
+            setStatus(`System evaluated. Outputs: ${JSON.stringify(results)}`);
+        }
+
+        function closeSurfaceViewer() {
+            document.getElementById('surfaceViewer').style.display = 'none';
+        }
+
+        function updateCurrentVariableInfo() {
+            const infoDiv = document.getElementById('currentVariableInfo');
+            if (selectedVariable) {
+                infoDiv.innerHTML = `
+                    <div><strong>Name:</strong> ${selectedVariable.name}</div>
+                    <div><strong>Range:</strong> [${selectedVariable.range.join(', ')}]</div>
+                    <div><strong>Type:</strong> ${selectedVariable.membershipFunctions.length > 0 ? selectedVariable.membershipFunctions[0].type : 'No MF'}</div>
+                `;
+            } else {
+                infoDiv.innerHTML = '<div>No variable selected</div>';
+            }
+        }
+
+        function updateFISProperties() {
+            const propsDiv = document.getElementById('fisProperties');
+            propsDiv.innerHTML = `
+                <div><strong>Name:</strong> ${currentFIS.name}</div>
+                <div><strong>Type:</strong> ${currentFIS.type}</div>
+                <div><strong>AND Method:</strong> ${currentFIS.andMethod}</div>
+                <div><strong>OR Method:</strong> ${currentFIS.orMethod}</div>
+                <div><strong>Defuzz Method:</strong> ${currentFIS.defuzzMethod}</div>
+            `;
+        }
+
+        function setStatus(message) {
+            document.getElementById('statusBar').textContent = message;
+        }
+
+        // Event Listeners
+        document.getElementById('commandInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                executeCommand(this.value);
+                this.value = '';
+            }
+        });
+
+        // Initialize the application
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>
