@@ -294,41 +294,30 @@ function finitializeApp() {
     fcurrentFIS.rules = [];
 
     // Add input variable: Temperature
-    const temp = fcurrentFIS.addInputVariable('temperature', [0, 100]);
-    fcurrentFIS.addMembershipFunction(temp, 'cold', 'trimf', [0, 0, 30]);
-    fcurrentFIS.addMembershipFunction(temp, 'warm', 'trimf', [20, 50, 80]);
-    fcurrentFIS.addMembershipFunction(temp, 'hot', 'trimf', [70, 100, 100]);
+    const temp = fcurrentFIS.addInputVariable('Interes', [0, 100]);
+    fcurrentFIS.addMembershipFunction(temp, 'Malo', 'trapmf', [0, 0, 30, 40]);
+    fcurrentFIS.addMembershipFunction(temp, 'Medio', 'trapmf', [20, 50, 80,90]);
+    fcurrentFIS.addMembershipFunction(temp, 'Bueno', 'trapmf', [30,60, 100, 100]);
 
     // Add input variable: Humidity
-    const humidity = fcurrentFIS.addInputVariable('humidity', [0, 100]);
-    fcurrentFIS.addMembershipFunction(humidity, 'low', 'trimf', [0, 0, 40]);
-    fcurrentFIS.addMembershipFunction(humidity, 'medium', 'trimf', [30, 50, 70]);
-    fcurrentFIS.addMembershipFunction(humidity, 'high', 'trimf', [60, 100, 100]);
+    const humidity = fcurrentFIS.addInputVariable('Aula', [0, 100]);
+    fcurrentFIS.addMembershipFunction(humidity, 'Mala', 'trapmf', [0, 0, 30, 40]);
+    fcurrentFIS.addMembershipFunction(humidity, 'Buena', 'trapmf', [20, 50, 80,90]);
+    fcurrentFIS.addMembershipFunction(humidity, 'Media', 'trapmf', [30,60, 100, 100]);
+
+    // Add input variable: Humidity
+    const humidit = fcurrentFIS.addInputVariable('Profesor', [0, 100]);
+    fcurrentFIS.addMembershipFunction(humidit, 'Mala', 'trapmf', [0, 0, 30, 40]);
+    fcurrentFIS.addMembershipFunction(humidit, 'Buena', 'trapmf', [20, 50, 80,90]);
+    fcurrentFIS.addMembershipFunction(humidit, 'Media', 'trapmf', [30,60, 100, 100]);
 
     // Add output variable: Fan Speed
-    const fanSpeed = fcurrentFIS.addOutputVariable('fan_speed', [0, 100]);
-    fcurrentFIS.addMembershipFunction(fanSpeed, 'slow', 'trimf', [0, 0, 33]);
-    fcurrentFIS.addMembershipFunction(fanSpeed, 'medium', 'trimf', [20, 50, 80]);
-    fcurrentFIS.addMembershipFunction(fanSpeed, 'fast', 'trimf', [67, 100, 100]);
+    const fanSpeed = fcurrentFIS.addOutputVariable('Nota', [0, 100]);
+    fcurrentFIS.addMembershipFunction(fanSpeed, 'Mala', 'trapmf', [0, 0, 30, 40]);
+    fcurrentFIS.addMembershipFunction(fanSpeed, 'Buena', 'trapmf', [20, 50, 80,90]);
+    fcurrentFIS.addMembershipFunction(fanSpeed, 'Media', 'trapmf', [30,60, 100, 100]);
 
-    // Add sample rules
-    fcurrentFIS.addRule(
-        [['temperature', 'hot'], ['humidity', 'high', 'and']],
-        [['fan_speed', 'fast']],
-        1
-    );
 
-    fcurrentFIS.addRule(
-        [['temperature', 'warm'], ['humidity', 'medium', 'and']],
-        [['fan_speed', 'medium']],
-        1
-    );
-
-    fcurrentFIS.addRule(
-        [['temperature', 'cold'], ['humidity', 'low', 'and']],
-        [['fan_speed', 'slow']],
-        1
-    );
 
     fselectedVariable = temp;
     fupdateFISEditor();
