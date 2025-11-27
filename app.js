@@ -324,44 +324,9 @@ if (edgeTypeSelect) {
     // Reflect changes if select changes programáticamente
     edgeTypeSelect.addEventListener('change', (e)=> updateEdgeTypeUI(e.target.value));
 }
-if (edgeTypeDropdown && edgeTypeMenu) {
-    edgeTypeDropdown.addEventListener('click', (e)=>{
-        e.stopPropagation();
-        edgeTypeMenu.classList.toggle('show');
-    });
-    document.querySelectorAll('.edge-type-option').forEach(btn => {
-        btn.addEventListener('click', ()=>{
-            const val = btn.dataset.value === 'undirected' ? 'undirected' : 'directed';
-            updateEdgeTypeUI(val);
-            edgeTypeMenu.classList.remove('show');
-        });
-    });
-    document.addEventListener('click', (e)=>{
-        if (!e.target.closest('.dropdown')) edgeTypeMenu.classList.remove('show');
-    });
-}
 
-/* ===== TOPBAR: COLORS DROPDOWN ===== */
-if (colorsDropdown && colorsMenu) {
-    colorsDropdown.addEventListener('click', (e)=>{
-        e.stopPropagation();
-        colorsMenu.classList.toggle('show');
-    });
-    document.addEventListener('click', (e)=>{
-        if (!e.target.closest('.dropdown')) colorsMenu.classList.remove('show');
-    });
-}
+// Nota: Los event listeners de dropdown están inicializados en grafos johnson.html
 
-/* ===== ANALYSIS DROPDOWN ===== */
-if (analysisDropdown && analysisMenu) {
-    analysisDropdown.addEventListener('click', (e)=>{
-        e.stopPropagation();
-        analysisMenu.classList.toggle('show');
-    });
-    document.addEventListener('click', (e)=>{
-        if (!e.target.closest('.dropdown')) analysisMenu.classList.remove('show');
-    });
-}
 if (analysisJohnson) {
     analysisJohnson.addEventListener('click', ()=>{
         analysisMenu?.classList.remove('show');

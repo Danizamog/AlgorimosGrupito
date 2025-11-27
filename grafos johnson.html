@@ -13,8 +13,8 @@
         <div class="tabs">
             <!-- GRUPO 1: Controles de Modo -->
             <div class="nav-group">
-                <button id="toggleMode" class="tab-btn" title="Cambiar entre modo normal y Johnson">🔄 Modo: Normal</button>
-                <button id="toggleAssignmentMode" class="tab-btn" title="Cambiar a modo Asignación">🧮 Modo: Asignación</button>
+                <button id="toggleMode" class="tab-btn" title="Cambiar entre modo normal y Johnson">🔄 Modo</button>
+                <button id="toggleAssignmentMode" class="tab-btn" title="Cambiar a modo Asignación">🧮 Asignación</button>
             </div>
 
             <!-- GRUPO 2: Gestión del Grafo -->
@@ -28,18 +28,18 @@
             <!-- GRUPO 3: Análisis -->
             <div class="nav-group">
                 <div class="dropdown analysis">
-                    <button class="dropdown-toggle tab-btn critical" id="analysisDropdown">⚡ Análisis ▾</button>
+                    <button class="dropdown-toggle tab-btn critical" id="analysisDropdown">⚡ Análisis</button>
                     <div class="dropdown-menu" id="analysisMenu">
                         <button class="dropdown-item" id="analysisJohnson">Maximizar/Minimizar (Johnson)</button>
                         <div class="dropdown-item has-submenu" id="assignmentSub">
-                            Asignación ▸
+                            🧮 Asignación
                             <div class="dropdown-menu submenu" id="assignmentMenu">
-                                <button class="dropdown-item" id="assignMaxBtn">Maximizar</button>
-                                <button class="dropdown-item" id="assignMinBtn">Minimizar</button>
+                                <button class="dropdown-item" id="assignMaxBtn">📈 Maximizar</button>
+                                <button class="dropdown-item" id="assignMinBtn">📉 Minimizar</button>
                             </div>
                         </div>
                         <button class="dropdown-item" id="northwestBtn">🚚 NorthWest (Transporte)</button>
-                        <button class="dropdown-item" id="analysisDijkstra">🛤️ Dijkstra (Ruta Más Corta)</button>
+                        <button class="dropdown-item" id="analysisDijkstra">🛤️ Dijkstra (Ruta Corta)</button>
                     </div>
                 </div>
             </div>
@@ -53,26 +53,26 @@
             </div>
         </div>
         <div class="right-controls">
-            <!-- Dropdown de colores -->
-            <div class="dropdown">
-                <button class="dropdown-toggle" id="colorsDropdown">🎨 Colores ▾</button>
-                <div class="dropdown-menu" id="colorsMenu">
-                    <div class="dropdown-row">
-                        <label class="dropdown-label" for="nodeColor">Color de nodos</label>
-                        <input type="color" id="nodeColor" value="#00f7ff" />
-                    </div>
-                    <div class="dropdown-row">
-                        <label class="dropdown-label" for="edgeColor">Color de conexiones</label>
-                        <input type="color" id="edgeColor" value="#00f7ff" />
-                    </div>
-                </div>
-            </div>
             <!-- Dropdown de tipo de arista -->
             <div class="dropdown">
-                <button class="dropdown-toggle" id="edgeTypeDropdown">Arista: <span id="edgeTypeLabel">Dirigida</span> ▾</button>
+                <button class="dropdown-toggle" id="edgeTypeDropdown" title="Seleccionar tipo de arista">↔️ Arista: <span id="edgeTypeLabel">Dirigida</span></button>
                 <div class="dropdown-menu" id="edgeTypeMenu">
-                    <button class="dropdown-item edge-type-option" data-value="directed">Dirigida</button>
-                    <button class="dropdown-item edge-type-option" data-value="undirected">No Dirigida</button>
+                    <button class="dropdown-item edge-type-option" data-value="directed">➜ Dirigida</button>
+                    <button class="dropdown-item edge-type-option" data-value="undirected">↔️ No Dirigida</button>
+                </div>
+            </div>
+            <!-- Dropdown de colores -->
+            <div class="dropdown">
+                <button class="dropdown-toggle" id="colorsDropdown" title="Personalizar colores">🎨 Colores</button>
+                <div class="dropdown-menu" id="colorsMenu">
+                    <div class="dropdown-row">
+                        <label class="dropdown-label" for="nodeColor">Nodos</label>
+                        <input type="color" id="nodeColor" value="#00f7ff" title="Color de nodos" />
+                    </div>
+                    <div class="dropdown-row">
+                        <label class="dropdown-label" for="edgeColor">Aristas</label>
+                        <input type="color" id="edgeColor" value="#00f7ff" title="Color de aristas" />
+                    </div>
                 </div>
             </div>
         </div>
@@ -91,7 +91,7 @@
         <div class="hidden"><select id="edgeType" aria-label="Tipo de arista"><option value="directed">Dirigida</option><option value="undirected">No Dirigida</option></select></div>
     </div>
     <!-- Help Modal -->
-    <div class="hiddenid="helpModal" aria-modal="true" role
+    <div class="hidden" id="helpModal" aria-modal="true" role="dialog">
         <div class="help-content">
             <div class="help-header">
                 <div class="help-title">📘 Ayuda del Editor de Grafos</div>
@@ -635,6 +635,95 @@
     </div>
 
     <script src="app.js" defer></script>
+    
+    <!-- Inicialización de Dropdowns - MEJORADO -->
+    <script>
+    // Inicializar dropdowns antes de que cargue app.js
+    function initializeDropdowns() {
+        console.log('🔧 Inicializando dropdowns...');
+        
+        const dropdownConfigs = [
+            { toggle: 'edgeTypeDropdown', menu: 'edgeTypeMenu' },
+            { toggle: 'colorsDropdown', menu: 'colorsMenu' },
+            { toggle: 'analysisDropdown', menu: 'analysisMenu' }
+        ];
+        
+        // Configurar cada dropdown
+        dropdownConfigs.forEach(config => {
+            const toggleEl = document.getElementById(config.toggle);
+            const menuEl = document.getElementById(config.menu);
+            
+            if (!toggleEl || !menuEl) {
+                console.error(`❌ Dropdown no encontrado: ${config.toggle} o ${config.menu}`);
+                console.log(`   - toggleEl: ${toggleEl ? '✓' : '✗'}`);
+                console.log(`   - menuEl: ${menuEl ? '✓' : '✗'}`);
+                return;
+            }
+            
+            console.log(`✓ Configurando: ${config.toggle}`);
+            
+            // Click en toggle
+            toggleEl.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                
+                // Cerrar otros menus
+                document.querySelectorAll('.dropdown-menu.show').forEach(m => {
+                    if (m.id !== config.menu) {
+                        m.classList.remove('show');
+                    }
+                });
+                
+                // Toggle el menu actual
+                menuEl.classList.toggle('show');
+                console.log(`📍 ${config.menu}: ${menuEl.classList.contains('show') ? 'ABIERTO' : 'CERRADO'}`);
+            });
+        });
+        
+        // Cerrar al hacer clic fuera
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.dropdown')) {
+                document.querySelectorAll('.dropdown-menu.show').forEach(m => {
+                    m.classList.remove('show');
+                });
+            }
+        }, true);
+        
+        // Manejadores especiales para edge-type
+        document.querySelectorAll('.edge-type-option').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const val = btn.dataset.value;
+                
+                if (window.updateEdgeTypeUI) {
+                    window.updateEdgeTypeUI(val);
+                }
+                document.getElementById('edgeTypeMenu')?.classList.remove('show');
+            });
+        });
+        
+        // Cerrar dropdown cuando se hace clic en items del análisis
+        document.querySelectorAll('#analysisMenu .dropdown-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                if (!item.classList.contains('has-submenu')) {
+                    setTimeout(() => {
+                        document.getElementById('analysisMenu')?.classList.remove('show');
+                    }, 50);
+                }
+            });
+        });
+        
+        console.log('✅ Dropdowns inicializados correctamente');
+    }
+    
+    // Ejecutar cuando el DOM esté listo
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeDropdowns);
+    } else {
+        initializeDropdowns();
+    }
+    </script>
+    
     <script>
     // Modo Asignación: alternancia y visual
     document.addEventListener('DOMContentLoaded', function() {
@@ -644,13 +733,13 @@
         assignmentBtn.addEventListener('click', function() {
             isAssignmentMode = !isAssignmentMode;
             if (isAssignmentMode) {
-                assignmentBtn.textContent = '🧮 Modo: Asignación (activo)';
+                assignmentBtn.textContent = '🧮 Asignación (activo)';
                 assignmentBtn.classList.add('johnson-mode');
                 modeBtn.disabled = true;
                 showModeNotification('Modo Asignación activado: puedes ingresar números negativos en las aristas.');
                 window.isAssignmentMode = true;
             } else {
-                assignmentBtn.textContent = '🧮 Modo: Asignación';
+                assignmentBtn.textContent = '🧮 Asignación';
                 assignmentBtn.classList.remove('johnson-mode');
                 modeBtn.disabled = false;
                 showModeNotification('Modo Asignación desactivado.');
