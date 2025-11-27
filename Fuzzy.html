@@ -237,23 +237,23 @@
             <span><span class="icon">🔍</span> Rule Viewer</span>
             <button class="fclose-btn" onclick="fcloseRuleViewer()" aria-label="Cerrar Rule Viewer">×</button>
         </header>
-        <div class="frule-viewer-content" style="display: flex; gap: 16px; padding: 12px; overflow: hidden;">
-            <aside class="frule-viewer-list" style="width: 280px; min-width: 220px;">
-                <h4 style="margin-bottom:8px;">Reglas</h4>
-                <div id="fruleViewerList" style="max-height: 520px; overflow:auto; border:1px solid var(--border-color); padding:8px; background:var(--background-dark); border-radius:6px;"></div>
-                <div style="margin-top:10px; display:flex; gap:8px;">
-                    <button class="ftoolbar-btn" onclick="fupdateRuleViewer()" style="flex:1;">Actualizar</button>
-                    <button class="ftoolbar-btn" onclick="fplayRuleViewer()" style="flex:1;">Play</button>
+        <div class="frule-viewer-content" style="display: flex; gap: 12px; padding: 10px; overflow: hidden; flex: 1; min-height: 0;">
+            <aside class="frule-viewer-list" style="width: 260px; min-width: 240px; flex-shrink: 0; display: flex; flex-direction: column;">
+                <h4 style="margin: 0 0 8px 0; font-size: 12px;">Reglas</h4>
+                <div id="fruleViewerList" style="flex: 1; overflow: auto; border:1px solid var(--border-color); padding:6px; background:var(--background-dark); border-radius:4px; min-height: 0;"></div>
+                <div style="margin-top:8px; display:flex; gap:6px;">
+                    <button class="ftoolbar-btn" onclick="fupdateRuleViewer()" style="flex:1; font-size: 11px; padding: 6px;">Actualizar</button>
+                    <button class="ftoolbar-btn" onclick="fplayRuleViewer()" style="flex:1; font-size: 11px; padding: 6px;">Play</button>
                 </div>
             </aside>
 
-            <div class="frule-viewer-chart" id="fruleViewerChart" style="flex: 2; min-height:360px; border: 1px solid var(--border-color); padding:8px; background:white; border-radius:6px;" role="img"></div>
+            <div class="frule-viewer-chart" id="fruleViewerChart" style="flex: 2; min-height: 0; border: 1px solid var(--border-color); padding: 8px; background: white; border-radius: 4px;" role="img"></div>
 
-            <aside class="finput-controls" style="width: 260px; min-width: 200px;">
-                <h4>Valores de Entrada</h4>
-                <div id="finputControls"></div>
-                <div style="margin-top:10px; display:flex; gap:8px;">
-                    <button class="ftoolbar-btn" onclick="fupdateRuleViewer()" style="flex:1;">Actualizar</button>
+            <aside class="finput-controls" style="width: 240px; min-width: 220px; flex-shrink: 0; display: flex; flex-direction: column; overflow: auto;">
+                <h4 style="margin: 0 0 8px 0; font-size: 12px;">Valores de Entrada</h4>
+                <div id="finputControls" style="flex: 1; overflow: auto; min-height: 0;"></div>
+                <div style="margin-top: 8px; display:flex; gap: 6px;">
+                    <button class="ftoolbar-btn" onclick="fupdateRuleViewer()" style="flex: 1; font-size: 11px; padding: 6px;">Actualizar</button>
                 </div>
             </aside>
         </div>
@@ -275,29 +275,22 @@
             <button class="fclose-btn" onclick="fcloseEvaluator()" aria-label="Cerrar Evaluador">×</button>
         </header>
         <div class="fevaluator-content">
-            <section class="fevaluator-inputs">
-                <h4>Valores de Entrada</h4>
-                <div id="fevaluatorInputs">
-                    </div>
-            </section>
-            <section class="fevaluator-results">
-                <h4>Resultados de Salida</h4>
-                <div id="fevaluatorResults">
-                    <div class="fevaluator-result"><b>Output 1:</b> 5.432</div>
-                </div>
-                <div class="fevaluator-details" id="fevaluatorDetails">
-                    <div class="feval-detail-section">
-                        <h5>Detalle de Membresía de Salida (Output 1)</h5>
-                        <div class="feval-membership">Slow: $\mu = 0.2$</div>
-                        <div class="feval-membership">Medium: $\mu = 0.8$</div>
-                    </div>
-                </div>
-            </section>
-            <div class="fevaluator-actions">
-                <button class="ftoolbar-btn" onclick="fevaluateFIS()">
+            <div style="display: flex; gap: 12px; overflow: hidden; flex: 1; min-height: 0;">
+                <section class="fevaluator-inputs" style="width: 240px; min-width: 200px; flex-shrink: 0; overflow: auto;">
+                    <h4 style="margin: 0 0 8px 0; font-size: 12px;">Valores de Entrada</h4>
+                    <div id="fevaluatorInputs" style="font-size: 12px;"></div>
+                </section>
+                <section class="fevaluator-results" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
+                    <h4 style="margin: 0 0 8px 0; font-size: 12px;">Resultados</h4>
+                    <div id="fevaluatorResults" style="margin-bottom: 8px; font-size: 12px;"></div>
+                    <div class="fevaluator-details" id="fevaluatorDetails" style="flex: 1; overflow: auto; min-height: 0; border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; background: #f9fafb;"></div>
+                </section>
+            </div>
+            <div class="fevaluator-actions" style="display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color);">
+                <button class="ftoolbar-btn" onclick="fevaluateFIS()" style="flex: 1;">
                     <span class="icon">✅</span> Evaluar
                 </button>
-                <button class="ftoolbar-btn" onclick="fresetEvaluator()" style="background: #6b7280;">
+                <button class="ftoolbar-btn" onclick="fresetEvaluator()" style="flex: 1; background: #6b7280;">
                     <span class="icon">❌</span> Reset
                 </button>
             </div>

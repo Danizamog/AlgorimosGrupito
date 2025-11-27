@@ -1551,6 +1551,54 @@ function fshowNotification(message) {
     }, 3000);
 }
 
+// Play button for Rule Viewer - cycles through input values to show rule activations
+let fplayRuleViewerRunning = false;
+function fplayRuleViewer() {
+    if (fplayRuleViewerRunning) {
+        fplayRuleViewerRunning = false;
+        return;
+    }
+    
+    fplayRuleViewerRunning = true;
+    fsetStatus('Playing Rule Viewer animation...');
+    
+    const animationSpeed = 100; // ms between updates
+    let step = 0;
+    
+    function animate() {
+        if (!fplayRuleViewerRunning) {
+            fsetStatus('Animation stopped');
+            return;
+        }
+        
+        // Vary first input through its range sinusoidally
+        if (fcurrentFIS.inputs.length > 0) {
+            const firstInput = fcurrentFIS.inputs[0];
+            const range = firstInput.range[1] - firstInput.range[0];
+            const mid = (firstInput.range[0] + firstInput.range[1]) / 2;
+            const newVal = mid + (range / 2) * Math.sin((step / 20) * Math.PI);
+            const slider = document.getElementById(`fiv_${firstInput.name}`);
+            if (slider) {
+                slider.value = newVal;
+                document.getElementById(`fiv_${firstInput.name}_val`).textContent = newVal.toFixed(2);
+            }
+        }
+        
+        fupdateRuleViewer();
+        step++;
+        
+        if (step > 40) {
+            fplayRuleViewerRunning = false;
+            fsetStatus('Animation finished');
+            return;
+        }
+        
+        setTimeout(animate, animationSpeed);
+    }
+    
+    animate();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     finitializeApp();
 });
