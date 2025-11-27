@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuzzy Logic Toolbox | Editor de Sistemas Difusos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="fuzzy.css">
+    <!-- Use explicit Plotly version to avoid the outdated 'latest' warning -->
+    <script src="https://cdn.plot.ly/plotly-2.18.2.min.js"></script>
+</head>
+<body>
+    <div class="fmodal-backdrop" id="fmodalBackdrop" onclick="fcloseAllModals()"></div>
+
+    <div class="fmatlab-container">
+        <main class="fmain-workspace">
+            <header class="ftoolbar" role="navigation">
+                <button class="ftoolbar-btn" onclick="fopenFIS()" title="Abrir archivo FIS">
+                    <span class="icon">📁</span> Open FIS
+                </button>
+                <button class="ftoolbar-btn" onclick="fsaveFIS()" title="Guardar archivo FIS">
+                    <span class="icon">💾</span> Save FIS
+                </button>
+                <div class="ftoolbar-separator"></div>
+                
+                <button class="ftoolbar-btn" onclick="faddVariable('input')" title="Añadir nueva variable de entrada">
+                    <span class="icon">➕</span> Add Input
+                </button>
+                <button class="ftoolbar-btn" onclick="faddVariable('output')" title="Añadir nueva variable de salida">
+                    <span class="icon">➕</span> Add Output
+                </button>
+                <div class="ftoolbar-separator"></div>
+                
+                <button class="ftoolbar-btn" onclick="fopenRuleEditor()" title="Abrir editor de reglas">
+                    <span class="icon">📜</span> Rule Editor
+                </button>
+                <div class="ftoolbar-separator"></div>
+                
+                <button class="ftoolbar-btn" onclick="fshowSurfaceViewer()" title="Ver superficie de control">
+                    <span class="icon">📊</span> Surface View
+                </button>
+                <button class="ftoolbar-btn" onclick="fshowRuleViewer()" title="Ver evaluación de reglas">
+                    <span class="icon">🔍</span> Rule View
+                </button>
+                <div class="ftoolbar-separator"></div>
+                
+                <button class="ftoolbar-btn" onclick="fopenEvaluator()" title="Evaluar sistema difuso">
+                    <span class="icon">🧮</span> Evaluate
+                </button>
+            </header>
+
+            <div class="feditor-area">
+                <aside class="ffis-editor fpanel">
+                    <div class="fpanel-header">FIS Editor</div>
+                    <div class="ffis-content">
+                        <section class="ffis-section">
+                            <h3>Variables de Entrada</h3>
+                            <div class="fvariable-list" id="finputVariables" role="list">
+                                <div class="fvariable-item selected" onclick="fselectVariable('input1')" role="listitem">Input 1 (0-10)</div>
+                                <div class="fvariable-item" onclick="fselectVariable('input2')" role="listitem">Input 2 (0-10)</div>
+                            </div>
+                            <button class="ftoolbar-btn" onclick="faddVariable('input')" style="width: 100%; margin-top: 8px;">
+                                <span class="icon">➕</span> Añadir Entrada
+                            </button>
+                        </section>
+
+                        <section class="ffis-section">
+                            <h3>Variables de Salida</h3>
+                            <div class="fvariable-list" id="foutputVariables" role="list">
+                                <div class="fvariable-item" onclick="fselectVariable('output1')" role="listitem">Output 1 (0-10)</div>
+                            </div>
+                            <button class="ftoolbar-btn" onclick="faddVariable('output')" style="width: 100%; margin-top: 8px;">
+                                <span class="icon">➕</span> Añadir Salida
+                            </button>
+                        </section>
+                        
+                        <section class="ffis-section">
+                            <h3>Propiedades del Sistema</h3>
+                            <div id="fcurrentVariableInfo" style="font-size: 12px; line-height: 1.6;">
+                                <b>Nombre:</b> mi_sistema_difuso<br>
+                                <b>Inferencia:</b> Mamdani<br>
+                                <b>Reglas:</b> 5
+                            </div>
+                            <!-- Contenedor para mostrar propiedades del FIS (usado por fuzzy.js) -->
+                            <div id="ffisProperties" style="margin-top:8px; font-size:12px; color:var(--text-medium);"></div>
+                        </section>
+                    </div>
+                </aside>
+
+                <section class="fmf-editor fpanel">
+                    <header class="fmf-header">
+                        <span><span class="icon">〰️</span> Editor de Función de Membresía: </span>
+                        <span id="fmf-current-var">Input 1 (No seleccionado)</span>
+                    </header>
+                    <div class="fmf-content">
+                        <div class="fmf-chart-container">
+                            <div class="fmf-chart" id="fmfChart" role="img" aria-label="Gráfico de Funciones de Membresía">
+                                </div>
+                            <div class="fmf-points-overlay" id="fmfPointsOverlay" aria-hidden="true"></div>
+                        </div>
+                        <div class="fmf-controls-panel">
+                            
+                            <div class="fcontrol-section">
+                                <h4>Selección de Variable</h4>
+                                <div class="fcontrol-group">
+                                    <label for="fvariableSelect">Variable Activa</label>
+                                    <select id="fvariableSelect" class="fform-select" onchange="fchangeVariable()">
+                                        <option value="">Seleccione una variable...</option>
+                                        </select>
+                                </div>
+                                <div class="fvariable-range">
+                                    <label for="frangeMin">Rango:</label>
+                                    <input type="number" id="frangeMin" class="fform-input-small" value="0" step="0.1" aria-label="Rango Mínimo">
+                                    <span>—</span>
+                                    <input type="number" id="frangeMax" class="fform-input-small" value="10" step="0.1" aria-label="Rango Máximo">
+                                    <button class="ftoolbar-btn-small" onclick="fupdateVariableRange()">
+                                        <span class="icon">🔄</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="fcontrol-section">
+                                <h4>Propiedades de MF</h4>
+                                <div class="fcontrol-group">
+                                    <label for="fmfName">Nombre</label>
+                                    <input type="text" id="fmfName" class="fform-input" value="mf1" aria-label="Nombre de la Función de Membresía">
+                                </div>
+                                <div class="fcontrol-group">
+                                    <label for="fmfType">Tipo</label>
+                                    <select id="fmfType" class="fform-select" onchange="fchangeMFType()" aria-label="Tipo de Función de Membresía">
+                                        <option value="trimf">Triangular (trimf)</option>
+                                        <option value="trapmf">Trapezoidal (trapmf)</option>
+                                        <option value="gaussmf">Gaussian (gaussmf)</option>
+                                        <option value="gbellmf">Bell (gbellmf)</option>
+                                        <option value="sigmf">Sigmoidal (sigmf)</option>
+                                    </select>
+                                </div>
+                                <div class="fcontrol-group">
+                                    <label for="fmfParams">Parámetros</label>
+                                    <input type="text" id="fmfParams" class="fform-input" value="[0, 0.5, 1]" aria-label="Parámetros de la Función de Membresía">
+                                    <div class="fparam-help" id="fparamHelp">
+                                        Triangular: [izquierda, centro, derecha]
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="fcontrol-section">
+                                <h4>Lista de MFs y Acciones</h4>
+                                <div class="fmf-list" id="fmfList" role="list">
+                                    </div>
+                                <div class="faction-buttons" style="margin-top: 15px;">
+                                    <button class="ftoolbar-btn" onclick="faddMembershipFunction()">
+                                        <span class="icon">➕</span> Añadir MF
+                                    </button>
+                                    <button class="ftoolbar-btn" onclick="fupdateMembershipFunction()">
+                                        <span class="icon">✏️</span> Actualizar MF
+                                    </button>
+                                    <button class="ftoolbar-btn" onclick="fremoveMembershipFunction()" style="background: var(--danger-color);">
+                                        <span class="icon">🗑️</span> Eliminar MF
+                                    </button>
+                                    <button class="ftoolbar-btn" onclick="fclearAllMFs()" style="background: #71717a;">
+                                        <span class="icon">🧹</span> Limpiar Todo
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <footer class="fstatus-bar" id="fstatusBar" role="status">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="fstatus-indicator"></span> 
+                    <span id="fstatusMessage">Ready - Select a variable to edit membership functions.</span>
+                </div>
+                <div id="fcoordInfo">X: N/A, Y: N/A</div>
+            </footer>
+        </main>
+    </div>
+
+    <dialog class="frule-editor-modal" id="fruleEditorModal">
+        <header class="fmodal-header">
+            <span><span class="icon">📜</span> Rule Editor</span>
+            <button class="fclose-btn" onclick="fcloseRuleEditor()" aria-label="Cerrar Editor de Reglas">×</button>
+        </header>
+        <div class="frule-editor-content">
+            <section class="frule-list-container">
+                <h4>Reglas Actuales</h4>
+                <div class="frule-list" id="fruleList" role="list">
+                    <div class="frule-item" role="listitem">
+                        <div class="frule-text">IF Input 1 IS low AND Input 2 IS high THEN Output 1 IS fast (1)</div>
+                        <div class="frule-controls">
+                            <button onclick="feditRule(1)">Edit</button>
+                            <button onclick="fdeleteRule(1)">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="frule-builder-container">
+                <h4>Añadir Nueva Regla</h4>
+                <div class="frule-builder" role="form">
+                    <div class="frule-part">
+                        <span>IF</span>
+                        <select id="fruleInput1" class="fform-select" onchange="fupdateRuleMFDropdowns()"></select>
+                        <span>IS</span>
+                        <select id="fruleMF1" class="fform-select"></select>
+                    </div>
+                    <div class="frule-part">
+                        <select id="fruleConnector" class="fform-select">
+                            <option value="and">AND</option>
+                            <option value="or">OR</option>
+                        </select>
+                        <select id="fruleInput2" class="fform-select" onchange="fupdateRuleMFDropdowns()"></select>
+                        <span>IS</span>
+                        <select id="fruleMF2" class="fform-select"></select>
+                    </div>
+                    <div class="frule-part">
+                        <span>THEN</span>
+                        <select id="fruleOutput" class="fform-select" onchange="fupdateRuleMFDropdowns()"></select>
+                        <span>IS</span>
+                        <select id="fruleOutputMF" class="fform-select"></select>
+                    </div>
+                    <div class="frule-part">
+                        <span>Peso:</span>
+                        <input type="number" id="fruleWeight" class="fform-input" value="1" min="0" max="1" step="0.1" style="width: 80px;">
+                    </div>
+                    <button class="ftoolbar-btn" onclick="faddRuleFromBuilder()" style="width: 100%; margin-top: 8px;">
+                        <span class="icon">➕</span> Añadir Regla
+                    </button>
+                </div>
+            </section>
+        </div>
+    </dialog>
+
+    <dialog class="frule-viewer" id="fruleViewer">
+        <header class="fmodal-header">
+            <span><span class="icon">🔍</span> Rule Viewer</span>
+            <button class="fclose-btn" onclick="fcloseRuleViewer()" aria-label="Cerrar Rule Viewer">×</button>
+        </header>
+        <div class="frule-viewer-content" style="display: flex; gap: 16px; padding: 12px; overflow: hidden;">
+            <aside class="frule-viewer-list" style="width: 280px; min-width: 220px;">
+                <h4 style="margin-bottom:8px;">Reglas</h4>
+                <div id="fruleViewerList" style="max-height: 520px; overflow:auto; border:1px solid var(--border-color); padding:8px; background:var(--background-dark); border-radius:6px;"></div>
+                <div style="margin-top:10px; display:flex; gap:8px;">
+                    <button class="ftoolbar-btn" onclick="fupdateRuleViewer()" style="flex:1;">Actualizar</button>
+                    <button class="ftoolbar-btn" onclick="fplayRuleViewer()" style="flex:1;">Play</button>
+                </div>
+            </aside>
+
+            <div class="frule-viewer-chart" id="fruleViewerChart" style="flex: 2; min-height:360px; border: 1px solid var(--border-color); padding:8px; background:white; border-radius:6px;" role="img"></div>
+
+            <aside class="finput-controls" style="width: 260px; min-width: 200px;">
+                <h4>Valores de Entrada</h4>
+                <div id="finputControls"></div>
+                <div style="margin-top:10px; display:flex; gap:8px;">
+                    <button class="ftoolbar-btn" onclick="fupdateRuleViewer()" style="flex:1;">Actualizar</button>
+                </div>
+            </aside>
+        </div>
+    </dialog>
+
+    <dialog class="fsurface-viewer" id="fsurfaceViewer">
+        <header class="fmodal-header">
+            <span><span class="icon">📊</span> Surface Viewer</span>
+            <button class="fclose-btn" onclick="fcloseSurfaceViewer()" aria-label="Cerrar Surface Viewer">×</button>
+        </header>
+        <div class="fsurface-content">
+            <div class="fsurface-chart" id="fsurfaceChart" role="img" aria-label="Gráfico de Superficie de Control"></div>
+        </div>
+    </dialog>
+    
+    <dialog class="fevaluator-modal" id="fevaluatorModal">
+        <header class="fmodal-header">
+            <span><span class="icon">🧮</span> FIS Evaluator</span>
+            <button class="fclose-btn" onclick="fcloseEvaluator()" aria-label="Cerrar Evaluador">×</button>
+        </header>
+        <div class="fevaluator-content">
+            <section class="fevaluator-inputs">
+                <h4>Valores de Entrada</h4>
+                <div id="fevaluatorInputs">
+                    </div>
+            </section>
+            <section class="fevaluator-results">
+                <h4>Resultados de Salida</h4>
+                <div id="fevaluatorResults">
+                    <div class="fevaluator-result"><b>Output 1:</b> 5.432</div>
+                </div>
+                <div class="fevaluator-details" id="fevaluatorDetails">
+                    <div class="feval-detail-section">
+                        <h5>Detalle de Membresía de Salida (Output 1)</h5>
+                        <div class="feval-membership">Slow: $\mu = 0.2$</div>
+                        <div class="feval-membership">Medium: $\mu = 0.8$</div>
+                    </div>
+                </div>
+            </section>
+            <div class="fevaluator-actions">
+                <button class="ftoolbar-btn" onclick="fevaluateFIS()">
+                    <span class="icon">✅</span> Evaluar
+                </button>
+                <button class="ftoolbar-btn" onclick="fresetEvaluator()" style="background: #6b7280;">
+                    <span class="icon">❌</span> Reset
+                </button>
+            </div>
+        </div>
+    </dialog>
+
+    <div class="fnotification" id="fnotification">
+        <span class="icon">✅</span> ¡Guardado exitoso!
+    </div>
+
+    <script src="fuzzy.js"></script>
+</body>
+</html>

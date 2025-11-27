@@ -1,0 +1,979 @@
+/*
+    ========================================================
+    REINICIO GLOBAL Y FUENTES
+    ========================================================
+*/
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /* Fuente moderna y clara */
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.15s, opacity 0.15s;
+}
+
+:root {
+    --primary-color: #0078d4; /* Azul de Microsoft/MATLAB */
+    --primary-dark: #005a9e;
+    --primary-light: #e6f7ff;
+    --background-light: #f9fbfd; /* Fondo muy claro */
+    --background-dark: #f0f4f8; /* Fondo de sección */
+    --text-dark: #1f2937; /* Texto principal oscuro */
+    --text-medium: #4b5563;
+    --border-color: #d1d5db; /* Gris de borde */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --success-color: #10b981; /* Verde moderno */
+    --danger-color: #ef4444; /* Rojo moderno */
+    --radius: 6px;
+}
+
+body {
+    background: var(--background-light);
+    color: var(--text-dark);
+    line-height: 1.5;
+}
+
+/*
+    ========================================================
+    LAYOUT PRINCIPAL
+    ========================================================
+*/
+.fmatlab-container {
+    display: flex;
+    flex-direction: column; 
+    min-height: 100vh;
+    background: var(--background-light);
+}
+
+.fmain-workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/*
+    ========================================================
+    TOOLBAR
+    ========================================================
+*/
+.ftoolbar {
+    background: white;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    box-shadow: var(--shadow-sm);
+}
+
+.ftoolbar-btn {
+    padding: 8px 14px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 5px rgba(0, 120, 212, 0.2);
+    outline: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.ftoolbar-btn:hover {
+    background: var(--primary-dark);
+    box-shadow: 0 4px 8px rgba(0, 120, 212, 0.3);
+    transform: translateY(-1px);
+}
+
+.ftoolbar-btn:active {
+    background: #004b87; 
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    transform: translateY(0);
+}
+
+.ftoolbar-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.ftoolbar-separator {
+    width: 1px;
+    height: 24px;
+    background: var(--border-color);
+    margin: 0 6px;
+}
+
+/*
+    ========================================================
+    ÁREA DE EDITOR (PANEL PRINCIPAL)
+    ========================================================
+*/
+.feditor-area {
+    flex: 1;
+    display: flex;
+    padding: 16px;
+    gap: 16px;
+    height: calc(100vh - 100px); 
+    overflow: hidden;
+}
+
+/* Estilo base para Paneles (FIS Editor, MF Editor) */
+.fpanel {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.fpanel-header {
+    background: var(--primary-dark);
+    color: white;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    border-bottom: 2px solid #003d82;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* FIS Editor (Panel Izquierdo) */
+.ffis-editor {
+    width: 300px; 
+    min-width: 250px;
+}
+
+.ffis-content {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+}
+
+.ffis-section {
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    border-radius: 4px;
+    background: var(--background-dark);
+    box-shadow: var(--shadow-sm);
+}
+
+.ffis-section h3 {
+    color: var(--primary-dark);
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 6px;
+}
+
+.fvariable-list {
+    max-height: 140px; 
+    overflow-y: auto;
+    margin-bottom: 10px;
+    padding-right: 4px; 
+}
+
+.fvariable-item {
+    padding: 8px 10px;
+    margin: 4px 0;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    border-left: 4px solid var(--primary-color);
+}
+
+.fvariable-item:hover {
+    background: var(--primary-light);
+    border-color: var(--primary-color);
+    border-left-color: var(--primary-dark);
+}
+
+.fvariable-item.selected {
+    background: var(--primary-light);
+    border: 1px solid var(--primary-color);
+    border-left: 4px solid var(--primary-color);
+    font-weight: 600;
+    box-shadow: 0 0 5px rgba(0, 120, 212, 0.2);
+}
+
+/* MF Editor (Panel Derecho) */
+.fmf-editor {
+    flex: 1;
+}
+
+.fmf-header {
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--primary-dark);
+    color: white;
+    border-bottom: 2px solid #003d82;
+}
+
+.fmf-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.fmf-chart-container {
+    flex: 1;
+    position: relative;
+    border-bottom: 1px solid var(--border-color);
+    padding: 12px;
+    background: white;
+    min-height: 380px; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fmf-chart {
+    width: 100%;
+    height: 100%;
+}
+
+/* Puntos Draggable */
+.fmf-points-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 50;
+    overflow: visible;
+}
+
+.fdraggable-point {
+    position: absolute;
+    width: 16px; 
+    height: 16px;
+    background: var(--primary-color);
+    border: 2px solid white; 
+    border-radius: 50%;
+    cursor: grab;
+    z-index: 100;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    pointer-events: all;
+    touch-action: none; /* prevent default touch scrolling while dragging */
+}
+
+.fdraggable-point:hover {
+    transform: translate(-50%, -50%) scale(1.4); 
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    filter: none;
+}
+
+.fdraggable-point.dragging {
+    transform: translate(-50%, -50%) scale(1.6); 
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7);
+    cursor: grabbing;
+    filter: brightness(1.1);
+    z-index: 200;
+}
+
+.fpoint-label {
+    position: absolute;
+    background: rgba(31, 41, 55, 0.95); 
+    color: white;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: bold;
+    pointer-events: none;
+    z-index: 101;
+    transform: translateY(-25px) translateX(-50%);
+    white-space: nowrap;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    left: 50%;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.fdraggable-point:hover .fpoint-label,
+.fdraggable-point.dragging .fpoint-label {
+    opacity: 1;
+}
+
+/* Panel de Controles de MF */
+.fmf-controls-panel {
+    min-height: 280px;
+    max-height: 350px;
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    background: var(--background-dark);
+    border-top: 1px solid var(--border-color);
+    overflow-x: auto;
+    overflow-y: hidden; 
+}
+
+.fcontrol-section {
+    flex-shrink: 0;
+    width: 280px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: white;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s ease;
+}
+
+.fcontrol-section:hover {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.fcontrol-section h4 {
+    color: var(--primary-dark);
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 6px;
+}
+
+.fcontrol-group {
+    margin-bottom: 12px;
+}
+
+.fcontrol-group label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-medium);
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.fform-input,
+.fform-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 12px;
+    background: white;
+    font-family: 'Inter', sans-serif;
+}
+
+.fform-input:focus,
+.fform-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-light);
+    background: #ffffff;
+}
+
+.fform-input:hover,
+.fform-select:hover {
+    border-color: var(--primary-color);
+}
+
+.fform-input-small,
+.ftoolbar-btn-small {
+    padding: 6px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+}
+
+.fform-input-small {
+    flex: 1;
+    min-width: 50px;
+    border: 1px solid var(--border-color);
+    background: white;
+}
+
+.ftoolbar-btn-small {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ftoolbar-btn-small:hover {
+    background: var(--primary-dark);
+    box-shadow: 0 2px 6px rgba(0, 120, 212, 0.25);
+    transform: none; /* Evita el salto vertical */
+}
+
+.fvariable-range {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 8px;
+    background: var(--background-dark);
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+}
+
+.fvariable-range label,
+.fvariable-range span {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-medium);
+    white-space: nowrap;
+}
+
+.fparam-help {
+    font-size: 10px;
+    color: var(--text-medium);
+    margin-top: 6px;
+    font-style: italic;
+    padding: 6px;
+    background: #f9f9ff;
+    border-radius: 4px;
+    border-left: 3px solid var(--primary-color);
+}
+
+.faction-buttons {
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.faction-buttons .ftoolbar-btn {
+    padding: 8px 10px;
+    font-size: 12px;
+}
+
+.fmf-list {
+    max-height: 120px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px;
+    background: var(--background-dark);
+    overflow-y: auto;
+}
+
+.fmf-list-item {
+    padding: 6px 8px;
+    margin: 3px 0;
+    background: white;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    border-left: 3px solid var(--primary-color);
+    font-weight: 500;
+}
+
+.fmf-list-item:hover {
+    background: var(--primary-light);
+    border-left-color: var(--primary-dark);
+}
+
+.fmf-list-item.selected {
+    background: #d0e7f7;
+    border-left: 3px solid var(--primary-dark);
+    font-weight: 600;
+}
+
+/*
+    ========================================================
+    MODALES (Ventanas emergentes)
+    ========================================================
+*/
+.fmodal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5); 
+    z-index: 999;
+    display: none;
+    opacity: 0;
+    backdrop-filter: blur(2px);
+    transition: opacity 0.3s;
+}
+
+.frule-editor-modal,
+.fsurface-viewer,
+.frule-viewer,
+.fevaluator-modal {
+    position: fixed;
+    flex: 3; min-height: 320px; height: 100%; border: 1px solid var(--border-color);
+    left: 50%;
+    background: white;
+.frule-input-control {
+    margin-bottom: 10px;
+}
+
+.feval-output-chart {
+    border: 1px solid var(--border-color);
+    background: white;
+    padding: 8px;
+    border-radius: 6px;
+}
+    border: 2px solid var(--primary-dark);
+    border-radius: var(--radius);
+    z-index: 1000;
+    box-shadow: var(--shadow-md);
+    display: none;
+    flex-direction: column;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.frule-editor-modal {
+    width: 90%;
+    max-width: 1000px;
+    height: 85%;
+    max-height: 650px;
+}
+
+.fsurface-viewer {
+    width: 85%;
+    height: 80%;
+}
+
+.frule-viewer {
+    width: 90%;
+    height: 85%;
+}
+
+.frule-viewer-list {
+    background: var(--background-dark);
+    padding: 10px;
+    border-radius: 6px;
+}
+
+.frule-list-item {
+    padding: 8px;
+    margin-bottom: 6px;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+}
+.frule-list-item.selected { box-shadow: 0 2px 6px rgba(0,0,0,0.08); border-left: 4px solid var(--primary-color); }
+
+.frule-viewer-chart { display:flex; flex-direction:column; gap:8px; }
+
+.fevaluator-modal {
+    width: 500px;
+    max-width: 90vw;
+}
+
+.frule-editor-modal.active,
+.fsurface-viewer.active,
+.frule-viewer.active,
+.fevaluator-modal.active {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    display: flex;
+}
+
+.fmodal-header {
+    background: var(--primary-dark);
+    color: white;
+    padding: 12px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #003d82;
+    cursor: grab; 
+}
+
+.fmodal-header span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fclose-btn {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    font-size: 16px;
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    cursor: pointer;
+    line-height: 1;
+    transition: background-color 0.2s;
+}
+
+.fclose-btn:hover {
+    background: var(--danger-color);
+    border-color: var(--danger-color);
+    transform: scale(1.05);
+}
+
+/* Evaluator */
+.fevaluator-content {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.fevaluator-inputs,
+.fevaluator-results {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 12px;
+    background: var(--background-dark);
+}
+
+.fevaluator-inputs h4,
+.fevaluator-results h4 {
+    color: var(--primary-dark);
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.fevaluator-input {
+    margin-bottom: 8px;
+}
+
+.fevaluator-input label {
+    display: block;
+    font-size: 12px;
+    margin-bottom: 3px;
+    color: var(--text-medium);
+    font-weight: 500;
+}
+
+.fevaluator-input input {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 11px;
+    border: 1px solid #c0c0c0;
+    border-radius: 3px;
+    background: white;
+}
+
+.fevaluator-result {
+    padding: 8px 10px;
+    background: white;
+    border-radius: 3px;
+    margin-bottom: 4px;
+    font-size: 12px;
+    border-left: 3px solid var(--primary-color);
+    font-weight: 600;
+}
+
+.fevaluator-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.feval-detail-section {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #c0c0c0;
+}
+
+.feval-detail-section h5 {
+    margin: 0 0 6px 0;
+    color: var(--primary-dark);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.feval-membership {
+    font-size: 11px;
+    color: #4b5563;
+    margin: 3px 0;
+    padding: 4px 6px;
+    background: white;
+    border-radius: 2px;
+    border-left: 2px solid var(--primary-color);
+}
+
+/* Rules */
+.frule-editor-content {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    gap: 16px;
+    overflow: hidden;
+}
+
+.frule-list-container,
+.frule-builder-container {
+    flex: 1;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 12px;
+    background: var(--background-dark);
+    overflow-y: auto;
+}
+
+.frule-list-container h4,
+.frule-builder-container h4 {
+    margin-bottom: 10px;
+    color: var(--primary-dark);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.frule-list {
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+.frule-item {
+    background: white;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--success-color); 
+    transition: all 0.2s ease;
+}
+
+.frule-item:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    background: #f8fcfb;
+}
+
+.frule-text {
+    font-size: 11px;
+    margin-bottom: 6px;
+    color: var(--text-dark);
+    font-weight: 500;
+}
+
+.frule-controls {
+    display: flex;
+    gap: 6px;
+}
+
+.frule-controls button {
+    padding: 5px 10px;
+    font-size: 10px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    background: var(--danger-color);
+    color: white;
+    font-weight: 600;
+}
+
+.frule-controls button:hover {
+    background: #c52929;
+}
+
+.frule-builder {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.frule-part {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.frule-part select {
+    padding: 6px 8px;
+    font-size: 11px;
+    border: 1px solid #c0c0c0;
+    border-radius: 3px;
+    background: var(--background-dark);
+}
+
+/* Surface Viewer */
+.fsurface-content {
+    flex: 1;
+    padding: 16px;
+}
+
+.fsurface-chart {
+    width: 100%;
+    height: 100%;
+}
+
+/*
+    ========================================================
+    STATUS BAR
+    ========================================================
+*/
+.fstatus-bar {
+    background: var(--background-dark);
+    border-top: 1px solid var(--border-color);
+    padding: 6px 16px;
+    font-size: 12px;
+    color: var(--text-medium);
+    height: 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+    flex-shrink: 0; 
+}
+
+.fstatus-indicator {
+    width: 10px;
+    height: 10px;
+    background: var(--success-color);
+    border-radius: 50%;
+    box-shadow: 0 0 5px rgba(16, 185, 129, 0.5);
+    animation: fpulse 2s infinite;
+}
+
+@keyframes fpulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* Notification */
+.fnotification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--success-color);
+    color: white;
+    padding: 12px 18px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 2000;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    display: none;
+    animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/*
+    ========================================================
+    RESPONSIVE Y SCROLLBARS
+    ========================================================
+*/
+
+/* Scrollbars - Más estrechos y menos intrusivos */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--background-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #a1a1aa; 
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #71717a;
+}
+
+@media (max-width: 1200px) {
+    .feditor-area {
+        gap: 12px;
+        padding: 12px;
+    }
+    .fmf-controls-panel {
+        gap: 12px;
+        padding: 12px;
+    }
+}
+
+@media (max-width: 900px) {
+    .feditor-area {
+        flex-direction: column;
+        height: auto;
+        overflow-y: auto;
+        padding-bottom: 60px; /* Espacio para el status bar fijo o barra de scroll */
+    }
+
+    .ffis-editor {
+        width: 100%;
+        max-height: 400px;
+    }
+
+    .fmf-editor {
+        width: 100%;
+        min-height: 600px;
+    }
+
+    .fmf-chart-container {
+        min-height: 300px;
+    }
+
+    .fmf-controls-panel {
+        overflow-x: scroll;
+        overflow-y: hidden;
+        max-height: 300px;
+    }
+    
+    .fcontrol-section {
+        min-width: 250px;
+    }
+
+    .frule-editor-content {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+}
+
+@media (max-width: 500px) {
+    .ftoolbar {
+        padding: 8px 10px;
+        gap: 8px;
+    }
+    .ftoolbar-btn {
+        font-size: 11px;
+        padding: 6px 10px;
+    }
+    .faction-buttons {
+        grid-template-columns: 1fr;
+    }
+    .fevaluator-modal {
+        width: 95%;
+    }
+    .frule-editor-modal,
+    .fsurface-viewer,
+    .frule-viewer {
+        width: 95% !important;
+        height: 90% !important;
+    }
+}
