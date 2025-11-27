@@ -185,47 +185,19 @@
         </header>
         <div class="frule-editor-content">
             <section class="frule-list-container">
-                <h4>Reglas Actuales</h4>
+                <h4>Reglas Actuales (<span id="fruleCount">0</span>)</h4>
                 <div class="frule-list" id="fruleList" role="list">
-                    <div class="frule-item" role="listitem">
-                        <div class="frule-text">IF Input 1 IS low AND Input 2 IS high THEN Output 1 IS fast (1)</div>
-                        <div class="frule-controls">
-                            <button onclick="feditRule(1)">Edit</button>
-                            <button onclick="fdeleteRule(1)">Delete</button>
-                        </div>
-                    </div>
+                    <!-- Las reglas se generan dinámicamente -->
                 </div>
             </section>
             <section class="frule-builder-container">
-                <h4>Añadir Nueva Regla</h4>
-                <div class="frule-builder" role="form">
-                    <div class="frule-part">
-                        <span>IF</span>
-                        <select id="fruleInput1" class="fform-select" onchange="fupdateRuleMFDropdowns()"></select>
-                        <span>IS</span>
-                        <select id="fruleMF1" class="fform-select"></select>
-                    </div>
-                    <div class="frule-part">
-                        <select id="fruleConnector" class="fform-select">
-                            <option value="and">AND</option>
-                            <option value="or">OR</option>
-                        </select>
-                        <select id="fruleInput2" class="fform-select" onchange="fupdateRuleMFDropdowns()"></select>
-                        <span>IS</span>
-                        <select id="fruleMF2" class="fform-select"></select>
-                    </div>
-                    <div class="frule-part">
-                        <span>THEN</span>
-                        <select id="fruleOutput" class="fform-select" onchange="fupdateRuleMFDropdowns()"></select>
-                        <span>IS</span>
-                        <select id="fruleOutputMF" class="fform-select"></select>
-                    </div>
-                    <div class="frule-part">
-                        <span>Peso:</span>
-                        <input type="number" id="fruleWeight" class="fform-input" value="1" min="0" max="1" step="0.1" style="width: 80px;">
-                    </div>
-                    <button class="ftoolbar-btn" onclick="faddRuleFromBuilder()" style="width: 100%; margin-top: 8px;">
-                        <span class="icon">➕</span> Añadir Regla
+                <h4>Añadir/Editar Regla</h4>
+                <div class="frule-builder" id="fruleBuilder" role="form">
+                    <!-- El contenido será generado dinámicamente por fupdateRuleBuilderSelects() -->
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 12px;">
+                    <button class="ftoolbar-btn" onclick="fresetRuleBuilder()" style="flex: 1; background: #6b7280;">
+                        <span class="icon">🔄</span> Reset
                     </button>
                 </div>
             </section>
@@ -261,11 +233,64 @@
 
     <dialog class="fsurface-viewer" id="fsurfaceViewer">
         <header class="fmodal-header">
-            <span><span class="icon">📊</span> Surface Viewer</span>
+            <span style="font-weight: 600; font-size: 14px;"><span class="icon">📊</span> Surface Viewer - MATLAB Style</span>
             <button class="fclose-btn" onclick="fcloseSurfaceViewer()" aria-label="Cerrar Surface Viewer">×</button>
         </header>
         <div class="fsurface-content">
-            <div class="fsurface-chart" id="fsurfaceChart" role="img" aria-label="Gráfico de Superficie de Control"></div>
+            <!-- Panel de controles IZQUIERDA -->
+            <div class="fsurface-panel">
+                <h3 class="fsurface-panel-title">Variables</h3>
+                
+                <div class="fsurface-control-group">
+                    <label class="fsurface-label">X Axis:</label>
+                    <select id="fsurfaceInputX" class="fsurface-select" onchange="fupdateSurfaceViewOptions()"></select>
+                </div>
+                
+                <div class="fsurface-control-group">
+                    <label class="fsurface-label">Y Axis:</label>
+                    <select id="fsurfaceInputY" class="fsurface-select" onchange="fupdateSurfaceViewOptions()"></select>
+                </div>
+                
+                <div class="fsurface-control-group">
+                    <label class="fsurface-label">Output:</label>
+                    <select id="fsurfaceOutput" class="fsurface-select" onchange="fupdateSurfaceViewOptions()"></select>
+                </div>
+                
+                <div class="fsurface-panel-section">
+                    <h3 class="fsurface-panel-title">Display</h3>
+                    
+                    <div class="fsurface-control-group">
+                        <label class="fsurface-label">Colormap:</label>
+                        <select id="fsurfaceColormap" class="fsurface-select" onchange="fupdateSurfaceViewOptions()">
+                            <option value="Viridis">Viridis</option>
+                            <option value="Plasma">Plasma</option>
+                            <option value="Inferno">Inferno</option>
+                            <option value="Magma">Magma</option>
+                            <option value="Cividis">Cividis</option>
+                            <option value="Blues">Blues</option>
+                            <option value="Greens">Greens</option>
+                            <option value="Reds">Reds</option>
+                            <option value="RdBu">RdBu</option>
+                            <option value="Jet">Jet</option>
+                            <option value="Hot">Hot</option>
+                            <option value="Cool">Cool</option>
+                        </select>
+                    </div>
+                    
+                    <div class="fsurface-control-group" style="margin-top: 10px;">
+                        <label class="fsurface-label">Resolution:</label>
+                        <input type="range" id="fsurfaceResolution" value="20" min="10" max="40" step="2" style="width: 100%; height: 6px; cursor: pointer;" onchange="fupdateSurfaceViewOptions()">
+                        <span id="fsurfaceResolutionLabel" class="fsurface-range-label">20 pts</span>
+                    </div>
+                </div>
+                
+                <button class="fsurface-refresh-btn" onclick="fupdateSurfaceViewOptions()">
+                    <span class="icon">🔄</span> Refresh
+                </button>
+            </div>
+            
+            <!-- Gráfica DERECHA (todo el espacio restante) -->
+            <div id="fsurfaceChart"></div>
         </div>
     </dialog>
     
@@ -302,5 +327,11 @@
     </div>
 
     <script src="fuzzy.js"></script>
+    <script>
+        // Initialize app when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            finitializeApp();
+        });
+    </script>
 </body>
 </html>

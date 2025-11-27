@@ -88,7 +88,7 @@ class FuzzyInferenceSystem {
     }
 
     trapmf(x, a, b, c, d) {
-        if (x <= a || x >= d) return 0;
+        if (x < a || x > d) return 0;
         if (x >= b && x <= c) return 1;
         if (x > a && x < b) return (x - a) / (b - a);
         if (x > c && x < d) return (d - x) / (d - c);
@@ -204,10 +204,45 @@ class FuzzyInferenceSystem {
     }
 
     defuzzify(variable, ruleOutputs) {
+        if (!ruleOutputs || ruleOutputs.length === 0) {
+            return variable.range[0] + (variable.range[1] - variable.range[0]) / 2;
+        }
+
+        // MATLAB-style centroid defuzzification
+        // Verificar si hay una sola regla dominante (activación > 0.9)
+        const dominantRule = ruleOutputs.find(r => r.activation > 0.9);
+        if (dominantRule && ruleOutputs.filter(r => r.activation > 0.1).length === 1) {
+            const mf = variable.membershipFunctions.find(m => m.name === dominantRule.mfName);
+            
+            if (mf && mf.type === 'trapmf' && mf.params.length === 4) {
+                const [a, b, c, d] = mf.params;
+                
+                // Fórmula del centroide para trapmf según MATLAB:
+                const areaLeft = (b - a) / 2;
+                const centroidLeft = a + (b - a) / 3;
+                const momentLeft = areaLeft * centroidLeft;
+                
+                const areaCenter = (c - b);
+                const centroidCenter = (b + c) / 2;
+                const momentCenter = areaCenter * centroidCenter;
+                
+                const areaRight = (d - c) / 2;
+                const centroidRight = c + (d - c) / 3;
+                const momentRight = areaRight * centroidRight;
+                
+                const totalArea = areaLeft + areaCenter + areaRight;
+                const totalMoment = momentLeft + momentCenter + momentRight;
+                
+                const result = totalArea > 0 ? totalMoment / totalArea : (b + c) / 2;
+                return Math.max(variable.range[0], Math.min(variable.range[1], result));
+            }
+        }
+
+        // Fallback: integración numérica para múltiples reglas
         let numerator = 0;
         let denominator = 0;
 
-        const resolution = 100;
+        const resolution = 1000;
         const step = (variable.range[1] - variable.range[0]) / resolution;
 
         for (let i = 0; i <= resolution; i++) {
@@ -216,6 +251,7 @@ class FuzzyInferenceSystem {
 
             for (const ruleOutput of ruleOutputs) {
                 const mf = variable.membershipFunctions.find(m => m.name === ruleOutput.mfName);
+                if (!mf) continue;
                 const mfDegree = this.calculateMembership(x, mf);
                 const clipped = Math.min(mfDegree, ruleOutput.activation);
                 membershipDegree = Math.max(membershipDegree, clipped);
@@ -225,10 +261,9 @@ class FuzzyInferenceSystem {
             denominator += membershipDegree;
         }
 
-        return denominator === 0 ? variable.range[0] : numerator / denominator;
-    }
-
-    findActiveMemberships(variable, value, threshold = 0.01) {
+        const result = denominator === 0 ? (variable.range[0] + variable.range[1]) / 2 : numerator / denominator;
+        return result;
+    }    findActiveMemberships(variable, value, threshold = 0.01) {
         return variable.membershipFunctions
             .map(mf => ({
                 name: mf.name,
@@ -257,12 +292,21 @@ class FuzzyInferenceSystem {
 
                 if (i === 0) yValues[i].push(y);
 
-                const result = this.evaluate({
-                    [inputX.name]: x,
-                    [inputY.name]: y
+                // Crear objeto con todos los valores de entrada
+                const inputValues = {};
+                this.inputs.forEach(input => {
+                    if (input === inputX) {
+                        inputValues[input.name] = x;
+                    } else if (input === inputY) {
+                        inputValues[input.name] = y;
+                    } else {
+                        // Usar el valor medio para las otras entradas
+                        inputValues[input.name] = (input.range[0] + input.range[1]) / 2;
+                    }
                 });
 
-                zValues[i].push(result.results[output.name]);
+                const result = this.evaluate(inputValues);
+                zValues[i].push(result.results[output.name] || 0);
             }
         }
 
@@ -276,6 +320,7 @@ let fselectedMF = null;
 let fdraggablePoints = [];
 let fcurrentDraggedPoint = null;
 let fselectedRuleViewerIndex = null;
+let feditingRuleIndex = null; // Para saber si estamos editando una regla
 
 // Utility: global hex->rgba helper (used by multiple viewers)
 function hexToRgba(hex, alpha = 0.25) {
@@ -293,36 +338,74 @@ function finitializeApp() {
     fcurrentFIS.outputs = [];
     fcurrentFIS.rules = [];
 
-    // Add input variable: Temperature
+    // Add input variable: Interes (Interest/Engagement)
     const temp = fcurrentFIS.addInputVariable('Interes', [0, 100]);
-    fcurrentFIS.addMembershipFunction(temp, 'Malo', 'trapmf', [0, 0, 30, 40]);
-    fcurrentFIS.addMembershipFunction(temp, 'Medio', 'trapmf', [20, 50, 80,90]);
-    fcurrentFIS.addMembershipFunction(temp, 'Bueno', 'trapmf', [30,60, 100, 100]);
+    fcurrentFIS.addMembershipFunction(temp, 'Malo', 'trapmf', [0, 0, 20, 40]);
+    fcurrentFIS.addMembershipFunction(temp, 'Medio', 'trapmf', [30, 45, 55, 70]);
+    fcurrentFIS.addMembershipFunction(temp, 'Bueno', 'trapmf', [60, 80, 100, 100]);
 
-    // Add input variable: Humidity
+    // Add input variable: Aula (Classroom/Environment)
     const humidity = fcurrentFIS.addInputVariable('Aula', [0, 100]);
-    fcurrentFIS.addMembershipFunction(humidity, 'Mala', 'trapmf', [0, 0, 30, 40]);
-    fcurrentFIS.addMembershipFunction(humidity, 'Buena', 'trapmf', [20, 50, 80,90]);
-    fcurrentFIS.addMembershipFunction(humidity, 'Media', 'trapmf', [30,60, 100, 100]);
+    fcurrentFIS.addMembershipFunction(humidity, 'Mala', 'trapmf', [0, 0, 25, 45]);
+    fcurrentFIS.addMembershipFunction(humidity, 'Buena', 'trapmf', [55, 75, 100, 100]);
+    fcurrentFIS.addMembershipFunction(humidity, 'Media', 'trapmf', [35, 45, 55, 65]);
 
-    // Add input variable: Humidity
+    // Add input variable: Profesor (Teacher Quality)
     const humidit = fcurrentFIS.addInputVariable('Profesor', [0, 100]);
-    fcurrentFIS.addMembershipFunction(humidit, 'Mala', 'trapmf', [0, 0, 30, 40]);
-    fcurrentFIS.addMembershipFunction(humidit, 'Buena', 'trapmf', [20, 50, 80,90]);
-    fcurrentFIS.addMembershipFunction(humidit, 'Media', 'trapmf', [30,60, 100, 100]);
+    fcurrentFIS.addMembershipFunction(humidit, 'Mala', 'trapmf', [0, 0, 30, 50]);
+    fcurrentFIS.addMembershipFunction(humidit, 'Buena', 'trapmf', [50, 70, 100, 100]);
+    fcurrentFIS.addMembershipFunction(humidit, 'Media', 'trapmf', [40, 50, 60, 70]);
 
-    // Add output variable: Fan Speed
+    // Add output variable: Nota (Grade)
     const fanSpeed = fcurrentFIS.addOutputVariable('Nota', [0, 100]);
-    fcurrentFIS.addMembershipFunction(fanSpeed, 'Mala', 'trapmf', [0, 0, 30, 40]);
-    fcurrentFIS.addMembershipFunction(fanSpeed, 'Buena', 'trapmf', [20, 50, 80,90]);
-    fcurrentFIS.addMembershipFunction(fanSpeed, 'Media', 'trapmf', [30,60, 100, 100]);
+    fcurrentFIS.addMembershipFunction(fanSpeed, 'Mala', 'trapmf', [0, 0, 30, 50]);
+    fcurrentFIS.addMembershipFunction(fanSpeed, 'Buena', 'trapmf', [75, 82, 100, 100]);
+    fcurrentFIS.addMembershipFunction(fanSpeed, 'Media', 'trapmf', [40, 45, 55, 60]);
 
+    // Add 27 fuzzy rules (3^3 = 27 combinations)
+    // Rules structure: IF Interes IS X AND Aula IS Y AND Profesor IS Z THEN Nota IS W
+    const rules = [
+        // Interes=Malo
+        { antecedent: [['Interes', 'Malo'], ['Aula', 'Mala'], ['Profesor', 'Mala']], consequent: [['Nota', 'Mala']], weight: 1 },
+        { antecedent: [['Interes', 'Malo'], ['Aula', 'Mala'], ['Profesor', 'Buena']], consequent: [['Nota', 'Mala']], weight: 1 },
+        { antecedent: [['Interes', 'Malo'], ['Aula', 'Mala'], ['Profesor', 'Media']], consequent: [['Nota', 'Mala']], weight: 1 },
+        { antecedent: [['Interes', 'Malo'], ['Aula', 'Buena'], ['Profesor', 'Mala']], consequent: [['Nota', 'Mala']], weight: 1 },
+        { antecedent: [['Interes', 'Malo'], ['Aula', 'Buena'], ['Profesor', 'Buena']], consequent: [['Nota', 'Media']], weight: 1 },
+        { antecedent: [['Interes', 'Malo'], ['Aula', 'Buena'], ['Profesor', 'Media']], consequent: [['Nota', 'Mala']], weight: 1 },
+        { antecedent: [['Interes', 'Malo'], ['Aula', 'Media'], ['Profesor', 'Mala']], consequent: [['Nota', 'Mala']], weight: 1 },
+        { antecedent: [['Interes', 'Malo'], ['Aula', 'Media'], ['Profesor', 'Buena']], consequent: [['Nota', 'Media']], weight: 1 },
+        { antecedent: [['Interes', 'Malo'], ['Aula', 'Media'], ['Profesor', 'Media']], consequent: [['Nota', 'Mala']], weight: 1 },
+        // Interes=Medio
+        { antecedent: [['Interes', 'Medio'], ['Aula', 'Mala'], ['Profesor', 'Mala']], consequent: [['Nota', 'Mala']], weight: 1 },
+        { antecedent: [['Interes', 'Medio'], ['Aula', 'Mala'], ['Profesor', 'Buena']], consequent: [['Nota', 'Media']], weight: 1 },
+        { antecedent: [['Interes', 'Medio'], ['Aula', 'Mala'], ['Profesor', 'Media']], consequent: [['Nota', 'Media']], weight: 1 },
+        { antecedent: [['Interes', 'Medio'], ['Aula', 'Buena'], ['Profesor', 'Mala']], consequent: [['Nota', 'Media']], weight: 1 },
+        { antecedent: [['Interes', 'Medio'], ['Aula', 'Buena'], ['Profesor', 'Buena']], consequent: [['Nota', 'Buena']], weight: 1 },
+        { antecedent: [['Interes', 'Medio'], ['Aula', 'Buena'], ['Profesor', 'Media']], consequent: [['Nota', 'Media']], weight: 1 },
+        { antecedent: [['Interes', 'Medio'], ['Aula', 'Media'], ['Profesor', 'Mala']], consequent: [['Nota', 'Media']], weight: 1 },
+        { antecedent: [['Interes', 'Medio'], ['Aula', 'Media'], ['Profesor', 'Buena']], consequent: [['Nota', 'Buena']], weight: 1 },
+        { antecedent: [['Interes', 'Medio'], ['Aula', 'Media'], ['Profesor', 'Media']], consequent: [['Nota', 'Media']], weight: 1 },
+        // Interes=Bueno
+        { antecedent: [['Interes', 'Bueno'], ['Aula', 'Mala'], ['Profesor', 'Mala']], consequent: [['Nota', 'Media']], weight: 1 },
+        { antecedent: [['Interes', 'Bueno'], ['Aula', 'Mala'], ['Profesor', 'Buena']], consequent: [['Nota', 'Buena']], weight: 1 },
+        { antecedent: [['Interes', 'Bueno'], ['Aula', 'Mala'], ['Profesor', 'Media']], consequent: [['Nota', 'Buena']], weight: 1 },
+        { antecedent: [['Interes', 'Bueno'], ['Aula', 'Buena'], ['Profesor', 'Mala']], consequent: [['Nota', 'Buena']], weight: 1 },
+        { antecedent: [['Interes', 'Bueno'], ['Aula', 'Buena'], ['Profesor', 'Buena']], consequent: [['Nota', 'Buena']], weight: 1 },
+        { antecedent: [['Interes', 'Bueno'], ['Aula', 'Buena'], ['Profesor', 'Media']], consequent: [['Nota', 'Buena']], weight: 1 },
+        { antecedent: [['Interes', 'Bueno'], ['Aula', 'Media'], ['Profesor', 'Mala']], consequent: [['Nota', 'Buena']], weight: 1 },
+        { antecedent: [['Interes', 'Bueno'], ['Aula', 'Media'], ['Profesor', 'Buena']], consequent: [['Nota', 'Buena']], weight: 1 },
+        { antecedent: [['Interes', 'Bueno'], ['Aula', 'Media'], ['Profesor', 'Media']], consequent: [['Nota', 'Buena']], weight: 1 }
+    ];
 
+    // Add all rules to FIS
+    rules.forEach(rule => {
+        fcurrentFIS.addRule(rule.antecedent, rule.consequent, rule.weight);
+    });
 
     fselectedVariable = temp;
     fupdateFISEditor();
     fupdateMembershipFunctionEditor();
-    fsetStatus('Fuzzy Logic System Ready - Click on variables to edit');
+    fsetStatus(`Fuzzy Logic System Ready - ${fcurrentFIS.rules.length} rules loaded`);
 }
 
 function fupdateFISEditor() {
@@ -564,7 +647,7 @@ function fmakePointsDraggable() {
         const color = colors[mfIndex % colors.length];
         let paramPositions = [];
 
-        if (mf.type === 'trimf' && mf.params.length === 3) {
+        if (mf.type === 'trapmf' && mf.params.length === 3) {
             paramPositions = [
                 { x: mf.params[0], y: 0, label: 'izq' },
                 { x: mf.params[1], y: 1, label: 'pico' },
@@ -729,7 +812,7 @@ function fvalidateAndApplyParameter(mf, paramIndex, newValue) {
     // Validación según tipo de función con tolerancia mínima
     const MIN_TOLERANCE = 0.01;
     
-    if (mf.type === 'trimf' && mf.params.length === 3) {
+    if (mf.type === 'trapmf' && mf.params.length === 3) {
         // Validar orden: a ≤ b ≤ c
         if (paramIndex === 0) {
             if (newValue > mf.params[1] - MIN_TOLERANCE) return false; // a no puede ser ≥ b
@@ -783,7 +866,7 @@ function fnormalizeMFParameters(mf, variable) {
     });
     
     // Corregir orden de parámetros si es necesario
-    if (mf.type === 'trimf' && mf.params.length === 3) {
+    if (mf.type === 'trapmf' && mf.params.length === 3) {
         mf.params.sort((a, b) => a - b);
     } else if (mf.type === 'trapmf' && mf.params.length === 4) {
         mf.params.sort((a, b) => a - b);
@@ -831,7 +914,7 @@ function fupdateParamHelp() {
     }
 
     const helpTexts = {
-        'trimf': 'Triangular: [left, peak, right]',
+        'trapmf': 'Triangular: [left, peak, right]',
         'trapmf': 'Trapezoidal: [left, bottom-left, bottom-right, right]',
         'gaussmf': 'Gaussian: [mean, sigma]',
         'gbellmf': 'Bell: [width, slope, center]',
@@ -895,9 +978,9 @@ function faddVariable(type) {
 
         // Add 3 default membership functions
         const step = (maxVal - minVal) / 3;
-        fcurrentFIS.addMembershipFunction(variable, 'low', 'trimf', [minVal, minVal, minVal + step]);
-        fcurrentFIS.addMembershipFunction(variable, 'medium', 'trimf', [minVal + step * 0.5, minVal + step * 1.5, minVal + step * 2.5]);
-        fcurrentFIS.addMembershipFunction(variable, 'high', 'trimf', [minVal + step * 2, maxVal, maxVal]);
+        fcurrentFIS.addMembershipFunction(variable, 'low', 'trapmf', [minVal, minVal, minVal + step]);
+        fcurrentFIS.addMembershipFunction(variable, 'medium', 'trapmf', [minVal + step * 0.5, minVal + step * 1.5, minVal + step * 2.5]);
+        fcurrentFIS.addMembershipFunction(variable, 'high', 'trapmf', [minVal + step * 2, maxVal, maxVal]);
 
         fselectedVariable = variable;
         fupdateFISEditor();
@@ -927,7 +1010,7 @@ function fchangeVariable() {
 function fchangeMFType() {
     const mfType = document.getElementById('fmfType').value;
     switch (mfType) {
-        case 'trimf':
+        case 'trapmf':
             document.getElementById('fmfParams').value = '[0, 5, 10]';
             break;
         case 'trapmf':
@@ -1070,91 +1153,160 @@ function fupdateEvaluator() {
 }
 
 function fevaluateFIS() {
-    const inputValues = {};
-    fcurrentFIS.inputs.forEach(inputVar => {
-        const value = parseFloat(document.getElementById(`finput_${inputVar.name}`).value);
-        inputValues[inputVar.name] = value;
-    });
-
-    const evaluationResult = fcurrentFIS.evaluate(inputValues);
-    const results = evaluationResult.results;
-    const details = evaluationResult.details;
-
-    const resultsDiv = document.getElementById('fevaluatorResults');
-    resultsDiv.innerHTML = '';
-
-    Object.keys(results).forEach(outputName => {
-        const div = document.createElement('div');
-        div.className = 'fevaluator-result';
-        div.innerHTML = `<strong>${outputName}:</strong> ${results[outputName].toFixed(2)}`;
-        resultsDiv.appendChild(div);
-    });
-
-    const detailsDiv = document.getElementById('fevaluatorDetails');
-    detailsDiv.innerHTML = '<h5>Detailed Analysis:</h5>';
-
-    const inputDetails = document.createElement('div');
-    inputDetails.className = 'feval-detail-section';
-    inputDetails.innerHTML = '<h5>Input Memberships:</h5>';
-
-    Object.keys(details.inputs).forEach(inputName => {
-        const mfDetails = details.inputs[inputName].details;
-        const detailText = mfDetails.map(d => `${d.name}: ${d.degree.toFixed(3)}`).join(', ');
-        const p = document.createElement('p');
-        p.className = 'feval-membership';
-        p.textContent = `${inputName}: ${detailText}`;
-        inputDetails.appendChild(p);
-    });
-
-    detailsDiv.appendChild(inputDetails);
-    // Additionally, for each output, draw a small membership plot showing clipped activations and defuzzified value
-    Object.keys(results).forEach(outputName => {
-        const outputVar = fcurrentFIS.outputs.find(o => o.name === outputName);
-        if (!outputVar) return;
-        const outContainer = document.createElement('div');
-        outContainer.className = 'feval-output-chart';
-        outContainer.style.width = '100%';
-        outContainer.style.height = '220px';
-        outContainer.style.marginTop = '8px';
-        const chartId = `feval_chart_${outputName}`;
-        const chartDiv = document.createElement('div');
-        chartDiv.id = chartId;
-        chartDiv.style.width = '100%';
-        chartDiv.style.height = '220px';
-        outContainer.appendChild(chartDiv);
-        detailsDiv.appendChild(outContainer);
-
-        // Build x range
-        const xs = [];
-        const res = 80;
-        const step = (outputVar.range[1] - outputVar.range[0]) / res;
-        for (let i = 0; i <= res; i++) xs.push(outputVar.range[0] + i * step);
-
-        // For each MF, compute original mf(x) and clipped by activation
-        const traces = [];
-        const colors = ['#0072BD', '#D95319', '#EDB120', '#7E2F8E', '#77AC30', '#4DBEEE', '#A2142F'];
-        const actList = details.outputs[outputName] || [];
-        outContainer.insertBefore(document.createElement('hr'), chartDiv);
-
-        outputVar.membershipFunctions.forEach((mf, mi) => {
-            const yOrig = xs.map(x => fcurrentFIS.calculateMembership(x, mf));
-            const mfAct = (actList.find(a => a.mfName === mf.name) || { activation: 0 }).activation || 0;
-            const yClipped = yOrig.map(v => Math.min(v, mfAct));
-
-            traces.push({ x: xs, y: yOrig, name: `${mf.name}`, line: { color: colors[mi % colors.length], width: 2, shape: 'spline' }, hoverinfo: 'none' });
-            traces.push({ x: xs, y: yClipped, name: `${mf.name} (clipped)`, fill: 'tozeroy', fillcolor: `${hexToRgba(colors[mi % colors.length], 0.25)}`, line: { color: colors[mi % colors.length], width: 1 }, hovertemplate: `${mf.name}: %{y:.3f}<extra></extra>` });
+    try {
+        const inputValues = {};
+        fcurrentFIS.inputs.forEach(inputVar => {
+            const inputEl = document.getElementById(`finput_${inputVar.name}`);
+            if (!inputEl) {
+                fshowNotification(`Input element not found: finput_${inputVar.name}`);
+                return;
+            }
+            const value = parseFloat(inputEl.value);
+            if (isNaN(value)) {
+                inputValues[inputVar.name] = (inputVar.range[0] + inputVar.range[1]) / 2;
+            } else {
+                inputValues[inputVar.name] = value;
+            }
         });
 
-        // Vertical line at defuzzified result
-        const defVal = results[outputName];
-        traces.push({ x: [defVal, defVal], y: [0, 1], mode: 'lines', line: { color: '#111', width: 2, dash: 'dash' }, name: 'Defuzzified' });
+        const evaluationResult = fcurrentFIS.evaluate(inputValues);
+        const results = evaluationResult.results;
+        const details = evaluationResult.details;
 
-        const layout = { title: `Output: ${outputName} (defuzzified: ${defVal.toFixed(2)})`, xaxis: { title: outputName }, yaxis: { range: [0, 1.05] }, showlegend: true, margin: { t: 40 } };
+        const resultsDiv = document.getElementById('fevaluatorResults');
+        if (!resultsDiv) {
+            fshowNotification('Results container not found');
+            return;
+        }
+        resultsDiv.innerHTML = '';
 
-        Plotly.newPlot(chartDiv, traces, layout, { responsive: true, displayModeBar: false });
-    });
+        Object.keys(results).forEach(outputName => {
+            const div = document.createElement('div');
+            div.className = 'fevaluator-result';
+            div.style.marginBottom = '6px';
+            div.style.padding = '8px';
+            div.style.backgroundColor = '#e3f2fd';
+            div.style.borderRadius = '4px';
+            div.style.fontWeight = 'bold';
+            div.innerHTML = `<strong>${outputName}:</strong> <span style="color: #0078d4; font-size: 14px;">${results[outputName].toFixed(2)}</span>`;
+            resultsDiv.appendChild(div);
+        });
 
-    fshowNotification('FIS evaluated successfully');
+        const detailsDiv = document.getElementById('fevaluatorDetails');
+        if (!detailsDiv) {
+            fshowNotification('Details container not found');
+            return;
+        }
+        detailsDiv.innerHTML = '<h5 style="margin-top: 0;">Análisis Detallado:</h5>';
+
+        const inputDetails = document.createElement('div');
+        inputDetails.className = 'feval-detail-section';
+        inputDetails.style.marginBottom = '12px';
+        inputDetails.innerHTML = '<h5 style="margin: 0 0 6px 0; font-size: 12px;">Membresías de Entrada:</h5>';
+
+        Object.keys(details.inputs).forEach(inputName => {
+            const mfDetails = details.inputs[inputName].details;
+            const detailText = mfDetails.length > 0 
+                ? mfDetails.map(d => `${d.name}: ${d.degree.toFixed(3)}`).join(', ')
+                : '(ninguna con activación)';
+            const p = document.createElement('p');
+            p.className = 'feval-membership';
+            p.style.margin = '4px 0';
+            p.style.fontSize = '11px';
+            p.textContent = `${inputName}: ${detailText}`;
+            inputDetails.appendChild(p);
+        });
+
+        detailsDiv.appendChild(inputDetails);
+
+        // Draw membership plots for each output
+        Object.keys(results).forEach(outputName => {
+            const outputVar = fcurrentFIS.outputs.find(o => o.name === outputName);
+            if (!outputVar) return;
+
+            const outContainer = document.createElement('div');
+            outContainer.style.marginBottom = '12px';
+            
+            const chartDiv = document.createElement('div');
+            chartDiv.id = `feval_chart_${outputName}`;
+            chartDiv.style.width = '100%';
+            chartDiv.style.height = '180px';
+            chartDiv.style.marginBottom = '8px';
+            outContainer.appendChild(chartDiv);
+
+            detailsDiv.appendChild(outContainer);
+
+            // Build x range
+            const xs = [];
+            const res = 80;
+            const step = (outputVar.range[1] - outputVar.range[0]) / res;
+            for (let i = 0; i <= res; i++) {
+                xs.push(outputVar.range[0] + i * step);
+            }
+
+            // For each MF, compute original and clipped
+            const traces = [];
+            const colors = ['#0072BD', '#D95319', '#EDB120', '#7E2F8E', '#77AC30', '#4DBEEE', '#A2142F'];
+            const actList = details.outputs[outputName] || [];
+
+            outputVar.membershipFunctions.forEach((mf, mi) => {
+                const yOrig = xs.map(x => fcurrentFIS.calculateMembership(x, mf));
+                const mfAct = (actList.find(a => a.mfName === mf.name) || { activation: 0 }).activation || 0;
+                const yClipped = yOrig.map(v => Math.min(v, mfAct));
+
+                traces.push({
+                    x: xs,
+                    y: yOrig,
+                    name: `${mf.name}`,
+                    line: { color: colors[mi % colors.length], width: 2 },
+                    hoverinfo: 'none'
+                });
+
+                const hexColor = colors[mi % colors.length];
+                const rgbaColor = `rgba(${parseInt(hexColor.substr(1,2), 16)}, ${parseInt(hexColor.substr(3,2), 16)}, ${parseInt(hexColor.substr(5,2), 16)}, 0.3)`;
+
+                traces.push({
+                    x: xs,
+                    y: yClipped,
+                    name: `${mf.name} (clipped)`,
+                    fill: 'tozeroy',
+                    fillcolor: rgbaColor,
+                    line: { color: colors[mi % colors.length], width: 1 },
+                    hovertemplate: `${mf.name}: %{y:.3f}<extra></extra>`
+                });
+            });
+
+            // Vertical line at defuzzified result
+            const defVal = results[outputName];
+            traces.push({
+                x: [defVal, defVal],
+                y: [0, 1],
+                mode: 'lines',
+                line: { color: '#111', width: 2, dash: 'dash' },
+                name: 'Defuzzificado'
+            });
+
+            const layout = {
+                title: `${outputName} = ${defVal.toFixed(2)}`,
+                xaxis: { title: outputName },
+                yaxis: { range: [0, 1.05] },
+                showlegend: true,
+                margin: { t: 30, b: 40, l: 50, r: 20 },
+                height: 200
+            };
+
+            try {
+                Plotly.newPlot(chartDiv, traces, layout, { responsive: true, displayModeBar: false });
+            } catch (e) {
+                console.error('Error en gráfico:', e);
+            }
+        });
+
+        fshowNotification('✓ FIS evaluado correctamente');
+    } catch (err) {
+        console.error('Error en fevaluateFIS:', err);
+        fshowNotification('Error al evaluar: ' + err.message);
+    }
 }
 
 function fresetEvaluator() {
@@ -1166,27 +1318,108 @@ function fresetEvaluator() {
 }
 
 function fopenRuleEditor() {
+    feditingRuleIndex = null; // Reset editing mode
     fupdateRuleList();
+    
+    // Reset button text
+    const addButton = document.querySelector('#fruleBuilder .ftoolbar-btn');
+    if (addButton) {
+        addButton.innerHTML = '<span class="icon">➕</span> Add Rule';
+        addButton.onclick = () => faddRuleFromBuilder();
+    }
+    
     openModal('fruleEditorModal');
 }
 
 function fcloseRuleEditor() {
     closeModal('fruleEditorModal');
+    feditingRuleIndex = null;
+}
+
+function fresetRuleBuilder() {
+    feditingRuleIndex = null;
+    
+    // Reset all inputs to defaults
+    const numInputs = fcurrentFIS.inputs.length;
+    const numOutputs = fcurrentFIS.outputs.length;
+
+    for (let i = 0; i < numInputs; i++) {
+        const inputSelect = document.getElementById('fruleInput' + i);
+        if (inputSelect && fcurrentFIS.inputs[i]) {
+            inputSelect.value = fcurrentFIS.inputs[i].name;
+        }
+    }
+
+    for (let i = 0; i < numOutputs; i++) {
+        const outputSelect = document.getElementById('fruleOutput' + i);
+        if (outputSelect && fcurrentFIS.outputs[i]) {
+            outputSelect.value = fcurrentFIS.outputs[i].name;
+        }
+    }
+
+    const weightInput = document.getElementById('fruleWeight');
+    if (weightInput) {
+        weightInput.value = '1';
+    }
+
+    fupdateRuleMFDropdowns();
+
+    // Reset button text
+    const addButton = document.querySelector('#fruleBuilder .ftoolbar-btn');
+    if (addButton) {
+        addButton.innerHTML = '<span class="icon">➕</span> Add Rule';
+        addButton.onclick = () => faddRuleFromBuilder();
+    }
+
+    fshowNotification('Rule builder reset');
 }
 
 function fupdateRuleList() {
     const ruleList = document.getElementById('fruleList');
+    const ruleCount = document.getElementById('fruleCount');
+    
     ruleList.innerHTML = '';
+    if (ruleCount) ruleCount.textContent = fcurrentFIS.rules.length;
+
+    if (fcurrentFIS.rules.length === 0) {
+        ruleList.innerHTML = '<p style="color: var(--text-medium); padding: 12px; text-align: center;">No rules defined yet</p>';
+        fupdateRuleBuilderSelects();
+        return;
+    }
 
     fcurrentFIS.rules.forEach((rule, index) => {
         const div = document.createElement('div');
         div.className = 'frule-item';
-        const antText = rule.antecedent.map(t => `${t[0]} is ${t[1]}`).join(' and ');
-        const consText = rule.consequent.map(c => `${c[0]} is ${c[1]}`).join(' and ');
+        
+        // Format antecedent with operators
+        let antText = '';
+        rule.antecedent.forEach((term, idx) => {
+            if (idx > 0) {
+                const operator = term[2] ? term[2].toUpperCase() : 'AND';
+                antText += ` ${operator} `;
+            }
+            antText += `${term[0]} is ${term[1]}`;
+        });
+        
+        // Format consequent
+        let consText = '';
+        rule.consequent.forEach((cons, idx) => {
+            if (idx > 0) {
+                const operator = cons[2] ? cons[2].toUpperCase() : 'AND';
+                consText += ` ${operator} `;
+            }
+            consText += `${cons[0]} is ${cons[1]}`;
+        });
+        
+        const weightText = rule.weight !== 1 ? ` (weight: ${rule.weight})` : '';
+        
         div.innerHTML = `
-            <div class="frule-text">Rule ${index + 1}: IF ${antText} THEN ${consText}</div>
+            <div class="frule-text">
+                <strong>Rule ${index + 1}:</strong> IF ${antText} THEN ${consText}${weightText}
+            </div>
             <div class="frule-controls">
-                <button onclick="fremoveRule(${index})">Remove</button>
+                <button onclick="feditRule(${index})" style="background: #0078d4;">✏️ Edit</button>
+                <button onclick="fremoveRule(${index})" style="background: #d83b01;">🗑️ Remove</button>
             </div>
         `;
         ruleList.appendChild(div);
@@ -1208,50 +1441,100 @@ function fupdateRuleViewer() {
     const evaluation = fcurrentFIS.evaluate(inputValues);
     const details = evaluation.details;
 
-    // Build rule activation bar chart
-    const ruleActivations = details.rules.map(r => ({ idx: r.index + 1, text: `Rule ${r.index + 1}`, activation: r.activation }));
+    // Update rule list with activation bars
+    const ruleList = document.getElementById('fruleViewerList');
+    if (ruleList) {
+        ruleList.innerHTML = '';
+        details.rules.forEach((rule, idx) => {
+            const div = document.createElement('div');
+            div.className = 'frule-list-item';
+            div.style.marginBottom = '6px';
+            div.style.padding = '6px';
+            div.style.backgroundColor = '#f9f9f9';
+            div.style.borderRadius = '3px';
+            div.style.border = '1px solid #e0e0e0';
+            
+            let antText = '';
+            rule.antecedent.forEach((term, i) => {
+                if (i > 0) antText += ' AND ';
+                antText += `${term[0]} is ${term[1]}`;
+            });
+            
+            const activationPercent = (rule.activation * 100).toFixed(1);
+            const barColor = rule.activation > 0.5 ? '#4CAF50' : rule.activation > 0.2 ? '#FFC107' : '#999';
+            
+            div.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+                    <strong style="min-width: 40px; color: #0078d4; font-size: 11px;">R${idx + 1}</strong>
+                    <div style="font-size: 10px; color: #666; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${antText}</div>
+                    <span style="font-weight: bold; min-width: 30px; text-align: right; color: ${barColor}; font-size: 11px;">${activationPercent}%</span>
+                </div>
+                <div style="width: 100%; height: 5px; background: #e0e0e0; border-radius: 2px; overflow: hidden;">
+                    <div style="height: 100%; width: ${rule.activation * 100}%; background: ${barColor}; transition: width 0.2s;"></div>
+                </div>
+            `;
+            ruleList.appendChild(div);
+        });
+    }
+
+    // Build main activation bar chart
     const chartDiv = document.getElementById('fruleViewerChart');
-    if (!chartDiv) return;
+    if (!chartDiv) {
+        console.warn('fruleViewerChart element not found');
+        return;
+    }
+
+    if (details.rules.length === 0) {
+        chartDiv.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No rules to display</p>';
+        return;
+    }
+
+    const ruleLabels = details.rules.map((_, i) => `R${i + 1}`);
+    const ruleActivations = details.rules.map(r => r.activation);
+    const colors = ruleActivations.map(act => 
+        act > 0.7 ? 'rgba(76, 175, 80, 0.8)' : 
+        act > 0.4 ? 'rgba(33, 150, 243, 0.8)' : 
+        act > 0.1 ? 'rgba(255, 193, 7, 0.8)' : 
+        'rgba(189, 189, 189, 0.5)'
+    );
 
     const barTrace = {
-        x: ruleActivations.map(r => r.text),
-        y: ruleActivations.map(r => r.activation),
+        x: ruleLabels,
+        y: ruleActivations,
         type: 'bar',
-        marker: { color: ruleActivations.map((_, i) => `rgba(${50 + i*30 % 200}, ${100 + i*20 % 150}, ${150 + i*10 % 100}, 0.8)`) },
-        hovertemplate: '%{x}<br>Activation: %{y:.3f}<extra></extra>'
+        marker: { color: colors, line: { color: '#333', width: 1 } },
+        hovertemplate: '%{x}<br>Activation: %{y:.3f}<extra></extra>',
+        name: 'Rule Activation'
     };
 
     const layout = {
-        title: 'Activación de Reglas',
-        xaxis: { tickangle: -45 },
-        yaxis: { title: 'Activación', range: [0, 1.05] },
-        margin: { t: 40, b: 140 }
+        title: { text: 'Activación de Reglas', font: { size: 14, color: '#333' } },
+        xaxis: { 
+            title: 'Reglas',
+            tickangle: 0,
+            showgrid: false
+        },
+        yaxis: { 
+            title: 'Fuerza de Activación',
+            range: [0, 1.05],
+            gridcolor: '#e8e8e8'
+        },
+        margin: { t: 40, r: 20, b: 40, l: 60 },
+        plot_bgcolor: '#fafafa',
+        paper_bgcolor: '#fff',
+        showlegend: false,
+        hovermode: 'closest'
     };
 
-    // Also add traces for input membership degrees as small markers (one per input variable)
-    const inputTraces = [];
-    let offset = 0;
-    fcurrentFIS.inputs.forEach((inputVar, vi) => {
-        const memberships = fcurrentFIS.fuzzify(inputVar, inputValues[inputVar.name]).details;
-        memberships.forEach(m => {
-            inputTraces.push({
-                x: [m.name + ' (' + inputVar.name + ')'],
-                y: [m.degree],
-                type: 'bar',
-                name: `${inputVar.name}: ${m.name}`,
-                marker: { opacity: 0.85 },
-                hovertemplate: `${inputVar.name} / ${m.name}<br>μ = %{y:.3f}<extra></extra>`
-            });
-        });
-        offset += 1;
-    });
-
-    // Compose combined figure: rules bar + inputs stacked below using subplot-like approach via domain
-    // Simpler: draw rules first, then draw input-degree bars in stacked layout by concatenating traces and adjusting layout barmode
-    const combinedTraces = [barTrace].concat(inputTraces);
-    const combinedLayout = Object.assign({}, layout, { barmode: 'group', showlegend: false });
-
-    Plotly.react(chartDiv, combinedTraces, combinedLayout, { responsive: true });
+    try {
+        // First purge the chart
+        Plotly.purge(chartDiv);
+        // Then plot
+        Plotly.newPlot(chartDiv, [barTrace], layout, { responsive: true, displayModeBar: false });
+    } catch (err) {
+        console.error('Error plotting rules:', err);
+        chartDiv.innerHTML = '<p style="color: red;">Error en gráfico de reglas: ' + err.message + '</p>';
+    }
 }
 
 // --- Modal helpers ---
@@ -1299,85 +1582,274 @@ function fcloseAllModals() {
 }
 
 function fupdateRuleBuilderSelects() {
-    const selects = [
-        'fruleInput1', 'fruleMF1',
-        'fruleInput2', 'fruleMF2',
-        'fruleOutput', 'fruleOutputMF'
-    ];
+    const ruleBuilder = document.getElementById('fruleBuilder');
+    if (!ruleBuilder) return;
 
-    document.getElementById('fruleInput1').innerHTML = '';
-    document.getElementById('fruleInput2').innerHTML = '';
-    document.getElementById('fruleOutput').innerHTML = '';
+    // Limpiar el constructor de reglas existente
+    ruleBuilder.innerHTML = '';
 
-    fcurrentFIS.inputs.forEach(input => {
-        const opt1 = document.createElement('option');
-        opt1.value = input.name;
-        opt1.textContent = input.name;
-        document.getElementById('fruleInput1').appendChild(opt1);
+    // Crear dinámicamente los selectores según el número de variables de entrada
+    const numInputs = fcurrentFIS.inputs.length;
+    const numOutputs = fcurrentFIS.outputs.length;
 
-        const opt2 = document.createElement('option');
-        opt2.value = input.name;
-        opt2.textContent = input.name;
-        document.getElementById('fruleInput2').appendChild(opt2);
+    if (numInputs === 0) {
+        ruleBuilder.innerHTML = '<p style="color: var(--text-medium); padding: 12px;">No input variables defined. Add input variables first.</p>';
+        return;
+    }
+
+    // Crear regla IF con todas las variables de entrada
+    let ruleHTML = '';
+    
+    for (let i = 0; i < numInputs; i++) {
+        if (i === 0) {
+            ruleHTML += '<div class="frule-part"><span>IF</span> ';
+        } else {
+            ruleHTML += '<div class="frule-part"><select id="fruleConnector_' + i + '" class="fform-select" style="width: 60px;"><option value="and">AND</option><option value="or">OR</option></select> ';
+        }
+        ruleHTML += '<select id="fruleInput' + i + '" class="fform-select" onchange="fupdateRuleMFDropdowns()"></select>';
+        ruleHTML += '<span>IS</span>';
+        ruleHTML += '<select id="fruleMF' + i + '" class="fform-select"></select>';
+        ruleHTML += '</div>';
+    }
+
+    // Agregar THEN con variables de salida
+    for (let i = 0; i < numOutputs; i++) {
+        if (i === 0) {
+            ruleHTML += '<div class="frule-part"><span>THEN</span> ';
+        } else {
+            ruleHTML += '<div class="frule-part"><select id="fruleOutputConnector_' + i + '" class="fform-select" style="width: 60px;"><option value="and">AND</option><option value="or">OR</option></select> ';
+        }
+        ruleHTML += '<select id="fruleOutput' + i + '" class="fform-select" onchange="fupdateRuleMFDropdowns()"></select>';
+        ruleHTML += '<span>IS</span>';
+        ruleHTML += '<select id="fruleOutputMF' + i + '" class="fform-select"></select>';
+        ruleHTML += '</div>';
+    }
+
+    // Peso de la regla
+    ruleHTML += '<div class="frule-part"><span>Weight:</span><input type="number" id="fruleWeight" class="fform-input" value="1" min="0" max="1" step="0.1" style="width: 80px;"></div>';
+
+    // Botón para agregar
+    ruleHTML += '<button class="ftoolbar-btn" onclick="faddRuleFromBuilder()" style="width: 100%; margin-top: 12px;"><span class="icon">➕</span> Add Rule</button>';
+
+    ruleBuilder.innerHTML = ruleHTML;
+
+    // Poblar los selectores de variables
+    fcurrentFIS.inputs.forEach((input, idx) => {
+        const select = document.getElementById('fruleInput' + idx);
+        if (select) {
+            select.innerHTML = '';
+            fcurrentFIS.inputs.forEach(i => {
+                const opt = document.createElement('option');
+                opt.value = i.name;
+                opt.textContent = i.name;
+                select.appendChild(opt);
+            });
+        }
     });
 
-    fcurrentFIS.outputs.forEach(output => {
-        const opt = document.createElement('option');
-        opt.value = output.name;
-        opt.textContent = output.name;
-        document.getElementById('fruleOutput').appendChild(opt);
+    fcurrentFIS.outputs.forEach((output, idx) => {
+        const select = document.getElementById('fruleOutput' + idx);
+        if (select) {
+            select.innerHTML = '';
+            fcurrentFIS.outputs.forEach(o => {
+                const opt = document.createElement('option');
+                opt.value = o.name;
+                opt.textContent = o.name;
+                select.appendChild(opt);
+            });
+        }
     });
 
     fupdateRuleMFDropdowns();
 }
 
 function fupdateRuleMFDropdowns() {
-    const input1 = document.getElementById('fruleInput1').value;
-    const input2 = document.getElementById('fruleInput2').value;
-    const output = document.getElementById('fruleOutput').value;
+    const numInputs = fcurrentFIS.inputs.length;
+    const numOutputs = fcurrentFIS.outputs.length;
 
-    const updateMFSelect = (selectId, varName) => {
-        const select = document.getElementById(selectId);
-        const allVars = [...fcurrentFIS.inputs, ...fcurrentFIS.outputs];
-        const variable = allVars.find(v => v.name === varName);
-        select.innerHTML = '';
-        if (variable) {
-            variable.membershipFunctions.forEach(mf => {
-                const opt = document.createElement('option');
-                opt.value = mf.name;
-                opt.textContent = mf.name;
-                select.appendChild(opt);
-            });
+    // Actualizar MF dropdowns para todas las entradas
+    for (let i = 0; i < numInputs; i++) {
+        const inputSelect = document.getElementById('fruleInput' + i);
+        const mfSelect = document.getElementById('fruleMF' + i);
+        
+        if (inputSelect && mfSelect) {
+            const varName = inputSelect.value;
+            const variable = fcurrentFIS.inputs.find(v => v.name === varName);
+            
+            mfSelect.innerHTML = '';
+            if (variable) {
+                variable.membershipFunctions.forEach(mf => {
+                    const opt = document.createElement('option');
+                    opt.value = mf.name;
+                    opt.textContent = mf.name;
+                    mfSelect.appendChild(opt);
+                });
+            }
         }
-    };
+    }
 
-    updateMFSelect('fruleMF1', input1);
-    updateMFSelect('fruleMF2', input2);
-    updateMFSelect('fruleOutputMF', output);
+    // Actualizar MF dropdowns para todas las salidas
+    for (let i = 0; i < numOutputs; i++) {
+        const outputSelect = document.getElementById('fruleOutput' + i);
+        const mfSelect = document.getElementById('fruleOutputMF' + i);
+        
+        if (outputSelect && mfSelect) {
+            const varName = outputSelect.value;
+            const variable = fcurrentFIS.outputs.find(v => v.name === varName);
+            
+            mfSelect.innerHTML = '';
+            if (variable) {
+                variable.membershipFunctions.forEach(mf => {
+                    const opt = document.createElement('option');
+                    opt.value = mf.name;
+                    opt.textContent = mf.name;
+                    mfSelect.appendChild(opt);
+                });
+            }
+        }
+    }
 }
 
 function faddRuleFromBuilder() {
-    const input1 = document.getElementById('fruleInput1').value;
-    const mf1 = document.getElementById('fruleMF1').value;
-    const connector = document.getElementById('fruleConnector').value;
-    const input2 = document.getElementById('fruleInput2').value;
-    const mf2 = document.getElementById('fruleMF2').value;
-    const output = document.getElementById('fruleOutput').value;
-    const outputMF = document.getElementById('fruleOutputMF').value;
+    const numInputs = fcurrentFIS.inputs.length;
+    const numOutputs = fcurrentFIS.outputs.length;
     const weight = parseFloat(document.getElementById('fruleWeight').value) || 1;
 
-    const antecedent = [
-        [input1, mf1],
-        [input2, mf2, connector]
-    ];
+    // Construir antecedente dinámicamente
+    const antecedent = [];
+    for (let i = 0; i < numInputs; i++) {
+        const inputSelect = document.getElementById('fruleInput' + i);
+        const mfSelect = document.getElementById('fruleMF' + i);
+        
+        if (inputSelect && mfSelect) {
+            const input = inputSelect.value;
+            const mf = mfSelect.value;
+            
+            if (i === 0) {
+                antecedent.push([input, mf]);
+            } else {
+                const connector = document.getElementById('fruleConnector_' + i);
+                const conn = connector ? connector.value : 'and';
+                antecedent.push([input, mf, conn]);
+            }
+        }
+    }
 
-    const consequent = [
-        [output, outputMF]
-    ];
+    // Construir consecuente dinámicamente
+    const consequent = [];
+    for (let i = 0; i < numOutputs; i++) {
+        const outputSelect = document.getElementById('fruleOutput' + i);
+        const mfSelect = document.getElementById('fruleOutputMF' + i);
+        
+        if (outputSelect && mfSelect) {
+            const output = outputSelect.value;
+            const mf = mfSelect.value;
+            
+            if (i === 0) {
+                consequent.push([output, mf]);
+            } else {
+                const connector = document.getElementById('fruleOutputConnector_' + i);
+                const conn = connector ? connector.value : 'and';
+                consequent.push([output, mf, conn]);
+            }
+        }
+    }
 
-    fcurrentFIS.addRule(antecedent, consequent, weight);
-    fupdateRuleList();
-    fshowNotification('Rule added successfully');
+    if (antecedent.length === 0 || consequent.length === 0) {
+        fshowNotification('Please configure all rule parts');
+        return;
+    }
+
+    // Si estamos editando una regla existente
+    if (feditingRuleIndex !== null) {
+        fcurrentFIS.rules[feditingRuleIndex] = {
+            antecedent: antecedent,
+            consequent: consequent,
+            weight: weight
+        };
+        fupdateRuleList();
+        fshowNotification(`Rule ${feditingRuleIndex + 1} updated successfully`);
+        feditingRuleIndex = null;
+        
+        // Resetear el botón a "Add Rule"
+        const addButton = document.querySelector('#fruleBuilder .ftoolbar-btn');
+        if (addButton) {
+            addButton.innerHTML = '<span class="icon">➕</span> Add Rule';
+            addButton.onclick = () => faddRuleFromBuilder();
+        }
+    } else {
+        // Agregar nueva regla
+        fcurrentFIS.addRule(antecedent, consequent, weight);
+        fupdateRuleList();
+        fshowNotification(`Rule added successfully (Total rules: ${fcurrentFIS.rules.length})`);
+    }
+}
+
+function feditRule(index) {
+    feditingRuleIndex = index;
+    const rule = fcurrentFIS.rules[index];
+    
+    if (!rule) {
+        fshowNotification('Rule not found');
+        return;
+    }
+
+    // Cargar los valores de la regla en el builder
+    const numInputs = fcurrentFIS.inputs.length;
+    const numOutputs = fcurrentFIS.outputs.length;
+
+    // Set antecedent values
+    for (let i = 0; i < numInputs && i < rule.antecedent.length; i++) {
+        const inputSelect = document.getElementById('fruleInput' + i);
+        const mfSelect = document.getElementById('fruleMF' + i);
+        
+        if (inputSelect && mfSelect) {
+            inputSelect.value = rule.antecedent[i][0];
+            fupdateRuleMFDropdowns();
+            mfSelect.value = rule.antecedent[i][1];
+        }
+        
+        if (i > 0) {
+            const connectorSelect = document.getElementById('fruleConnector_' + i);
+            if (connectorSelect && rule.antecedent[i][2]) {
+                connectorSelect.value = rule.antecedent[i][2];
+            }
+        }
+    }
+
+    // Set consequent values
+    for (let i = 0; i < numOutputs && i < rule.consequent.length; i++) {
+        const outputSelect = document.getElementById('fruleOutput' + i);
+        const mfSelect = document.getElementById('fruleOutputMF' + i);
+        
+        if (outputSelect && mfSelect) {
+            outputSelect.value = rule.consequent[i][0];
+            fupdateRuleMFDropdowns();
+            mfSelect.value = rule.consequent[i][1];
+        }
+        
+        if (i > 0) {
+            const connectorSelect = document.getElementById('fruleOutputConnector_' + i);
+            if (connectorSelect && rule.consequent[i][2]) {
+                connectorSelect.value = rule.consequent[i][2];
+            }
+        }
+    }
+
+    // Set weight
+    const weightInput = document.getElementById('fruleWeight');
+    if (weightInput) {
+        weightInput.value = rule.weight || 1;
+    }
+
+    // Change button text to "Update Rule"
+    const addButton = document.querySelector('#fruleBuilder .ftoolbar-btn');
+    if (addButton) {
+        addButton.innerHTML = '<span class="icon">✏️</span> Update Rule';
+        addButton.onclick = () => fupdateRuleFromBuilder();
+    }
+
+    fshowNotification(`Editing Rule ${index + 1}. Click "Update Rule" to save changes.`);
 }
 
 function fremoveRule(index) {
@@ -1392,27 +1864,98 @@ function fshowSurfaceViewer() {
         return;
     }
 
-    const inputX = fcurrentFIS.inputs[0];
-    const inputY = fcurrentFIS.inputs[1];
-    const output = fcurrentFIS.outputs[0];
+    // Inicializar selects
+    const inputXSelect = document.getElementById('fsurfaceInputX');
+    const inputYSelect = document.getElementById('fsurfaceInputY');
+    const outputSelect = document.getElementById('fsurfaceOutput');
+    
+    inputXSelect.innerHTML = '';
+    inputYSelect.innerHTML = '';
+    outputSelect.innerHTML = '';
+    
+    fcurrentFIS.inputs.forEach(input => {
+        const opt1 = document.createElement('option');
+        opt1.value = input.name;
+        opt1.textContent = input.name;
+        inputXSelect.appendChild(opt1);
+        
+        const opt2 = document.createElement('option');
+        opt2.value = input.name;
+        opt2.textContent = input.name;
+        inputYSelect.appendChild(opt2);
+    });
+    
+    fcurrentFIS.outputs.forEach(output => {
+        const opt = document.createElement('option');
+        opt.value = output.name;
+        opt.textContent = output.name;
+        outputSelect.appendChild(opt);
+    });
+    
+    // Set defaults
+    if (fcurrentFIS.inputs.length >= 2) {
+        inputXSelect.value = fcurrentFIS.inputs[0].name;
+        inputYSelect.value = fcurrentFIS.inputs[1].name;
+    }
+    if (fcurrentFIS.outputs.length > 0) {
+        outputSelect.value = fcurrentFIS.outputs[0].name;
+    }
+    
+    // Colormap default
+    document.getElementById('fsurfaceColormap').value = 'Viridis';
+    document.getElementById('fsurfaceResolution').value = 20;
+    
+    openModal('fsurfaceViewer');
+    
+    // Esperar a que el modal se renderice antes de dibujar
+    setTimeout(() => {
+        fupdateSurfaceViewOptions();
+        
+        // Agregar listener para redimensionamiento
+        const modal = document.getElementById('fsurfaceViewer');
+        window.addEventListener('resize', fupdateSurfaceViewOptions);
+    }, 100);
+}
 
-    const surfaceData = fcurrentFIS.generateSurfaceData(inputX, inputY, output);
+function fcloseSurfaceViewer() {
+    closeModal('fsurfaceViewer');
+    window.removeEventListener('resize', fupdateSurfaceViewOptions);
+}function fupdateSurfaceViewOptions() {
+    const inputXName = document.getElementById('fsurfaceInputX').value;
+    const inputYName = document.getElementById('fsurfaceInputY').value;
+    const outputName = document.getElementById('fsurfaceOutput').value;
+    const colormap = document.getElementById('fsurfaceColormap').value;
+    const resolution = parseInt(document.getElementById('fsurfaceResolution').value);
+    
+    // Update resolution label
+    document.getElementById('fsurfaceResolutionLabel').textContent = resolution + ' pts';
+    
+    const inputX = fcurrentFIS.inputs.find(i => i.name === inputXName);
+    const inputY = fcurrentFIS.inputs.find(i => i.name === inputYName);
+    const output = fcurrentFIS.outputs.find(o => o.name === outputName);
+    
+    if (!inputX || !inputY || !output) {
+        fshowNotification('Invalid variable selection');
+        return;
+    }
+    
+    // Generate surface data
+    const surfaceData = fcurrentFIS.generateSurfaceData(inputX, inputY, output, resolution);
 
     const trace = {
         z: surfaceData.z,
         x: surfaceData.x,
         y: surfaceData.y,
         type: 'surface',
-        colorscale: 'Viridis'
-    };
-
-    const layout = {
-        title: `Surface: ${output.name} vs ${inputX.name} and ${inputY.name}`,
-        scene: {
-            xaxis: { title: inputX.name },
-            yaxis: { title: inputY.name },
-            zaxis: { title: output.name }
-        }
+        colorscale: colormap,
+        showscale: true,
+        colorbar: {
+            title: output.name,
+            thickness: 20,
+            len: 0.7,
+            tickfont: { size: 10 }
+        },
+        hovertemplate: `${inputXName}: %{x:.2f}<br>${inputYName}: %{y:.2f}<br>${output.name}: %{z:.2f}<extra></extra>`
     };
 
     const surfaceChart = document.getElementById('fsurfaceChart');
@@ -1422,23 +1965,72 @@ function fshowSurfaceViewer() {
     }
 
     try {
-        // Plot and then open modal. Use promise to ensure Plotly finishes or fails gracefully.
-        Plotly.newPlot(surfaceChart, [trace], layout).then(() => {
-            openModal('fsurfaceViewer');
-        }).catch(err => {
-            console.error('Plotly surface error', err);
-            fshowNotification('Error al dibujar la superficie (ver consola)');
-            // still try to open modal so user can inspect
-            openModal('fsurfaceViewer');
-        });
+        // Calcular dimensiones reales del contenedor gráfica
+        let chartWidth = surfaceChart.offsetWidth;
+        let chartHeight = surfaceChart.offsetHeight;
+        
+        // Si las dimensiones son 0, usar valores por defecto
+        if (chartWidth <= 0) chartWidth = 800;
+        if (chartHeight <= 0) chartHeight = 600;
+
+        const layout = {
+            title: {
+                text: `${output.name} = f(${inputXName}, ${inputYName})`,
+                font: { size: 16, color: '#222' }
+            },
+            scene: {
+                xaxis: { 
+                    title: inputXName,
+                    backgroundcolor: 'rgb(240, 240, 240)',
+                    gridcolor: '#ddd',
+                    showbackground: true,
+                    type: 'linear'
+                },
+                yaxis: { 
+                    title: inputYName,
+                    backgroundcolor: 'rgb(240, 240, 240)',
+                    gridcolor: '#ddd',
+                    showbackground: true,
+                    type: 'linear'
+                },
+                zaxis: { 
+                    title: output.name,
+                    backgroundcolor: 'rgb(240, 240, 240)',
+                    gridcolor: '#ddd',
+                    showbackground: true,
+                    type: 'linear'
+                },
+                camera: {
+                    eye: { x: 1.5, y: 1.5, z: 1.3 }
+                }
+            },
+            width: chartWidth,
+            height: chartHeight,
+            margin: { l: 60, r: 60, b: 60, t: 60 },
+            paper_bgcolor: '#fff',
+            responsive: false,
+            autosize: false
+        };
+        
+        const config = {
+            responsive: false, 
+            displayModeBar: true, 
+            displaylogo: false,
+            modeBarButtonsToRemove: ['lasso2d', 'select2d']
+        };
+        
+        Plotly.purge(surfaceChart);
+        Plotly.newPlot(surfaceChart, [trace], layout, config);
+        fshowNotification(`✓ Surface actualizada: ${colormap}`);
     } catch (err) {
         console.error('Surface plotting exception', err);
-        fshowNotification('Excepción al generar la superficie');
+        fshowNotification('Error al generar superficie');
     }
 }
 
 function fcloseSurfaceViewer() {
     closeModal('fsurfaceViewer');
+    window.removeEventListener('resize', fupdateSurfaceViewOptions);
 }
 
 function fshowRuleViewer() {
@@ -1488,27 +2080,51 @@ function fcloseRuleViewer() {
 function fupdateCurrentVariableInfo() {
     const infoDiv = document.getElementById('fcurrentVariableInfo');
     if (fselectedVariable) {
+        const varType = fcurrentFIS.inputs.includes(fselectedVariable) ? 'Input' : 'Output';
+        const mfList = fselectedVariable.membershipFunctions.map(m => m.name).join(', ');
         infoDiv.innerHTML = `
             <div><strong>Name:</strong> ${fselectedVariable.name}</div>
+            <div><strong>Type:</strong> ${varType} Variable</div>
             <div><strong>Range:</strong> [${fselectedVariable.range[0]}, ${fselectedVariable.range[1]}]</div>
             <div><strong>MF Count:</strong> ${fselectedVariable.membershipFunctions.length}</div>
+            <div style="font-size: 11px; color: #666; margin-top: 6px; padding-top: 6px; border-top: 1px solid #ddd;">
+                <strong>Functions:</strong> ${mfList || 'None'}
+            </div>
         `;
     } else {
-        infoDiv.innerHTML = '<div>No variable selected</div>';
+        infoDiv.innerHTML = '<div style="color: var(--text-medium);">No variable selected. Click on a variable to view details.</div>';
     }
 }
 
 function fupdateFISProperties() {
     const propsDiv = document.getElementById('ffisProperties');
-    if (!propsDiv) return; // Defensive: evitar excepción si el contenedor no existe
+    if (!propsDiv) return;
+    
+    const inputVarsList = fcurrentFIS.inputs.map(i => i.name).join(', ') || 'None';
+    const outputVarsList = fcurrentFIS.outputs.map(o => o.name).join(', ') || 'None';
+    
     propsDiv.innerHTML = `
-        <div><strong>Nombre:</strong> ${fcurrentFIS.name}</div>
-        <div><strong>Tipo:</strong> ${fcurrentFIS.type}</div>
-        <div><strong>AND:</strong> ${fcurrentFIS.andMethod}</div>
-        <div><strong>Defuzz:</strong> ${fcurrentFIS.defuzzMethod}</div>
-        <div><strong>Reglas:</strong> ${fcurrentFIS.rules.length}</div>
-        <div><strong>Entradas:</strong> ${fcurrentFIS.inputs.length}</div>
-        <div><strong>Salidas:</strong> ${fcurrentFIS.outputs.length}</div>
+        <div style="background: #f5f5f5; padding: 8px; border-radius: 4px; margin-bottom: 8px;">
+            <div><strong>FIS Name:</strong> ${fcurrentFIS.name}</div>
+            <div><strong>Type:</strong> ${fcurrentFIS.type.charAt(0).toUpperCase() + fcurrentFIS.type.slice(1)}</div>
+        </div>
+        <div style="background: #f5f5f5; padding: 8px; border-radius: 4px; margin-bottom: 8px;">
+            <div><strong>Inference:</strong> ${fcurrentFIS.andMethod}/${fcurrentFIS.orMethod}</div>
+            <div><strong>Defuzzification:</strong> ${fcurrentFIS.defuzzMethod}</div>
+            <div><strong>Implication:</strong> ${fcurrentFIS.impMethod}</div>
+            <div><strong>Aggregation:</strong> ${fcurrentFIS.aggMethod}</div>
+        </div>
+        <div style="background: #f5f5f5; padding: 8px; border-radius: 4px; margin-bottom: 8px;">
+            <div><strong>🔢 Inputs:</strong> ${fcurrentFIS.inputs.length} variables</div>
+            <div style="font-size: 11px; color: #666; margin-top: 4px;">${inputVarsList}</div>
+        </div>
+        <div style="background: #f5f5f5; padding: 8px; border-radius: 4px; margin-bottom: 8px;">
+            <div><strong>📤 Outputs:</strong> ${fcurrentFIS.outputs.length} variables</div>
+            <div style="font-size: 11px; color: #666; margin-top: 4px;">${outputVarsList}</div>
+        </div>
+        <div style="background: #e3f2fd; padding: 8px; border-radius: 4px; border-left: 4px solid #0078d4;">
+            <div><strong>📋 Rules:</strong> ${fcurrentFIS.rules.length} rules loaded</div>
+        </div>
     `;
 }
 
@@ -1587,6 +2203,12 @@ function fplayRuleViewer() {
     
     animate();
 }
+
+// ======== EXPORT/IMPORT FIS ========
+
+// ======== VALIDATE FIS ========
+
+// ======== ANALYZE COVERAGE ========
 
 document.addEventListener('DOMContentLoaded', function() {
     finitializeApp();
