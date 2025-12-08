@@ -25,31 +25,21 @@
                 <button id="loadGraph" class="tab-btn" title="Importar un grafo desde JSON">📂 Importar</button>
             </div>
 
-            <!-- GRUPO 3: Análisis -->
-            <div class="nav-group">
-                <div class="dropdown analysis">
-                    <button class="dropdown-toggle tab-btn critical" id="analysisDropdown">⚡ Análisis</button>
-                    <div class="dropdown-menu" id="analysisMenu">
-                        <button class="dropdown-item" id="analysisJohnson">Maximizar/Minimizar (Johnson)</button>
-                        <div class="dropdown-item has-submenu" id="assignmentSub">
-                            🧮 Asignación
-                            <div class="dropdown-menu submenu" id="assignmentMenu">
-                                <button class="dropdown-item" id="assignMaxBtn">📈 Maximizar</button>
-                                <button class="dropdown-item" id="assignMinBtn">📉 Minimizar</button>
-                            </div>
-                        </div>
-                        <button class="dropdown-item" id="northwestBtn">🚚 NorthWest (Transporte)</button>
-                        <button class="dropdown-item" id="analysisDijkstra">🛤️ Dijkstra (Ruta Corta)</button>
-                    </div>
-                </div>
-            </div>
-
             <!-- GRUPO 4: Navegación -->
             <div class="nav-group">
-                <button id="openHelp" class="tab-btn" title="Ayuda">📘 Ayuda</button>
+                <a class="tab-btn" title="Sort" href="ayuda.html">📘 Ayuda</a>
                 <a class="tab-btn" title="Sort" href="sort.html">🔀 Sort</a>
                 <button onclick="window.location.href='arboles.html'" class="tab-btn" title="Ir a Árboles Binarios">🌳 Árboles</button>
                 <button onclick="window.location.href='fuzzy.html'" class="tab-btn" title="Ir a Fuzzy">🌀 Fuzzy</button>
+            </div>
+
+            <!-- GRUPO 3: Análisis (SEGUNDA FILA) -->
+            <div class="nav-group" style="width:100%;border-right:none;margin-top:4px">
+                <button class="tab-btn critical" id="analysisJohnson" title="Análisis Johnson">⚡ Johnson</button>
+                <button class="tab-btn critical" id="assignMaxBtn" title="Asignación Maximizar">📈 Asig Max</button>
+                <button class="tab-btn critical" id="assignMinBtn" title="Asignación Minimizar">📉 Asig Min</button>
+                <button class="tab-btn critical" id="northwestBtn" title="Algoritmo NorthWest">🚚 NorthWest</button>
+                <button class="tab-btn critical" id="analysisDijkstra" title="Dijkstra - Ruta Corta">🛤️ Dijkstra</button>
             </div>
         </div>
         <div class="right-controls">
@@ -91,7 +81,7 @@
         <div class="hidden"><select id="edgeType" aria-label="Tipo de arista"><option value="directed">Dirigida</option><option value="undirected">No Dirigida</option></select></div>
     </div>
     <!-- Help Modal -->
-    <div class="hidden" id="helpModal" aria-modal="true" role="dialog">
+    <div id="helpModal" class="help-modal" aria-modal="true" role="dialog">
         <div class="help-content">
             <div class="help-header">
                 <div class="help-title">📘 Ayuda del Editor de Grafos</div>
@@ -636,16 +626,14 @@
 
     <script src="app.js" defer></script>
     
-    <!-- Inicialización de Dropdowns - MEJORADO -->
+    <!-- Inicialización de Dropdowns -->
     <script>
-    // Inicializar dropdowns antes de que cargue app.js
     function initializeDropdowns() {
         console.log('🔧 Inicializando dropdowns...');
         
         const dropdownConfigs = [
             { toggle: 'edgeTypeDropdown', menu: 'edgeTypeMenu' },
-            { toggle: 'colorsDropdown', menu: 'colorsMenu' },
-            { toggle: 'analysisDropdown', menu: 'analysisMenu' }
+            { toggle: 'colorsDropdown', menu: 'colorsMenu' }
         ];
         
         // Configurar cada dropdown
@@ -655,8 +643,6 @@
             
             if (!toggleEl || !menuEl) {
                 console.error(`❌ Dropdown no encontrado: ${config.toggle} o ${config.menu}`);
-                console.log(`   - toggleEl: ${toggleEl ? '✓' : '✗'}`);
-                console.log(`   - menuEl: ${menuEl ? '✓' : '✗'}`);
                 return;
             }
             
@@ -675,19 +661,37 @@
                 });
                 
                 // Toggle el menu actual
+                const shouldShow = !menuEl.classList.contains('show');
                 menuEl.classList.toggle('show');
+                
+                // Calcular posición para menús en nav-group con position fixed
+                if (shouldShow && toggleEl.closest('.nav-group')) {
+                    const rect = toggleEl.getBoundingClientRect();
+                    menuEl.style.top = (rect.bottom + 4) + 'px';
+                    menuEl.style.left = rect.left + 'px';
+                } 
+                // Para dropdowns en right-controls
+                else if (shouldShow && toggleEl.closest('.right-controls')) {
+                    const rect = toggleEl.getBoundingClientRect();
+                    menuEl.style.top = (rect.bottom + 4) + 'px';
+                    menuEl.style.right = (window.innerWidth - rect.right) + 'px';
+                    menuEl.style.left = 'auto';
+                }
+                
                 console.log(`📍 ${config.menu}: ${menuEl.classList.contains('show') ? 'ABIERTO' : 'CERRADO'}`);
             });
         });
         
         // Cerrar al hacer clic fuera
         document.addEventListener('click', function(e) {
-            if (!e.target.closest('.dropdown')) {
+            // Cerrar todos los dropdowns si el clic está fuera de cualquier dropdown
+            const clickedDropdown = e.target.closest('.dropdown');
+            if (!clickedDropdown) {
                 document.querySelectorAll('.dropdown-menu.show').forEach(m => {
                     m.classList.remove('show');
                 });
             }
-        }, true);
+        }, false);
         
         // Manejadores especiales para edge-type
         document.querySelectorAll('.edge-type-option').forEach(btn => {
@@ -699,17 +703,6 @@
                     window.updateEdgeTypeUI(val);
                 }
                 document.getElementById('edgeTypeMenu')?.classList.remove('show');
-            });
-        });
-        
-        // Cerrar dropdown cuando se hace clic en items del análisis
-        document.querySelectorAll('#analysisMenu .dropdown-item').forEach(item => {
-            item.addEventListener('click', function(e) {
-                if (!item.classList.contains('has-submenu')) {
-                    setTimeout(() => {
-                        document.getElementById('analysisMenu')?.classList.remove('show');
-                    }, 50);
-                }
             });
         });
         

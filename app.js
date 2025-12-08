@@ -77,8 +77,6 @@ function initializeDijkstraElements() {
     if (analysisDijkstra) {
         analysisDijkstra.addEventListener('click', () => {
             console.log('Click en botón Dijkstra detectado');
-            const analysisMenuEl = document.getElementById('analysisMenu');
-            if (analysisMenuEl) analysisMenuEl.classList.remove('show');
             initiateDijkstra();
         });
         console.log('Event listener agregado correctamente');
@@ -329,7 +327,6 @@ if (edgeTypeSelect) {
 
 if (analysisJohnson) {
     analysisJohnson.addEventListener('click', ()=>{
-        analysisMenu?.classList.remove('show');
         johnsonCriticalPath();
     });
 }
@@ -1122,20 +1119,35 @@ const closeHelpBtn = document.getElementById('closeHelp');
 const closeHelpModalBtn = document.getElementById('closeHelpModal');
 const exportPdfBtn = document.getElementById('exportPdfBtn');
 
+// Abrir el modal de ayuda con iframe
 if (openHelpBtn) openHelpBtn.addEventListener('click', () => {
     const helpModal = document.getElementById('helpModal');
-    if (helpModal) helpModal.style.display = 'block';
+    if (helpModal) {
+        helpModal.style.display = 'flex';
+        helpModal.style.visibility = 'visible';
+        helpModal.style.zIndex = '9998';
+    }
 });
 
+// Cerrar el modal de ayuda - ambos botones
 if (closeHelpBtn) closeHelpBtn.addEventListener('click', () => {
-    const helpModal = document.getElementById('helpModal');
-    if (helpModal) helpModal.style.display = 'none';
+    const helpModalInline = document.getElementById('helpModal');
+    if (helpModalInline) helpModalInline.style.display = 'none';
 });
 
-// Cerrar el modal de ayuda con el botón X
 if (closeHelpModalBtn) closeHelpModalBtn.addEventListener('click', () => {
     const helpModal = document.getElementById('helpModal');
-    if (helpModal) helpModal.style.display = 'none';
+    if (helpModal) {
+        helpModal.style.display = 'none';
+    }
+});
+
+// Cerrar modal de ayuda al hacer clic en el fondo
+window.addEventListener('click', (e) => {
+    const helpModal = document.getElementById('helpModal');
+    if (e.target === helpModal) {
+        helpModal.style.display = 'none';
+    }
 });
 
 // Cerrar modal de ayuda al hacer clic fuera de él

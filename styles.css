@@ -9,16 +9,19 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
 body{background:var(--background);color:var(--text);overflow:hidden;height:100vh;width:100vw}
-.title{position:absolute;top:72px;left:50%;transform:translateX(-50%);font-size:24px;font-weight:bold;color:var(--primary);text-shadow:0 0 10px var(--primary);z-index:110;letter-spacing:2px;background:rgba(26,26,46,.7);padding:8px 20px;border-radius:10px;border:1px solid var(--primary);box-shadow:0 0 20px rgba(0,247,255,.3)}
-.hidden{display:none !important}
+.hidden{display:none}
+.title{position:absolute;top:110px;left:50%;transform:translateX(-50%);font-size:24px;font-weight:bold;color:var(--primary);text-shadow:0 0 10px var(--primary);z-index:110;letter-spacing:2px;background:rgba(26,26,46,.7);padding:8px 20px;border-radius:10px;border:1px solid var(--primary);box-shadow:0 0 20px rgba(0,247,255,.3)}
 /* Top navigation bar */
-.topbar{position:fixed;top:0;left:0;right:0;height:56px;background:rgba(26,26,46,.95);border-bottom:2px solid var(--primary);display:flex;align-items:center;justify-content:space-between;padding:8px 12px;z-index:120;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 4px 20px rgba(0,247,255,.15);overflow-x:auto;overflow-y:hidden}
+.topbar{position:fixed;top:0;left:0;right:0;height:102px;background:rgba(26,26,46,.95);border-bottom:2px solid var(--primary);display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;padding:8px 12px;z-index:120;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 4px 20px rgba(0,247,255,.15);overflow-x:auto;overflow-y:hidden}
 
-.tabs{display:flex;gap:2px;align-items:center;flex-wrap:nowrap;padding-right:8px}
+.tabs{display:flex;gap:2px;align-items:center;flex-wrap:wrap;width:100%;padding-right:8px}
 
-.nav-group{display:flex;gap:2px;align-items:center;padding:0 6px;border-right:1px solid rgba(0,247,255,.2);}
+.nav-group{display:flex;gap:2px;align-items:center;padding:4px 6px;border-right:1px solid rgba(0,247,255,.2);margin-bottom:4px}
 
 .nav-group:last-child{border-right:none}
+
+/* Dropdown dentro de nav-group debe ser position relative */
+.nav-group .dropdown{position:relative}
 
 .tab-btn{background:rgba(0,247,255,.15);border:1px solid rgba(0,247,255,.35);color:var(--text);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s ease;display:flex;align-items:center;gap:5px;white-space:nowrap;min-height:32px;letter-spacing:0.3px}
 
@@ -44,7 +47,7 @@ body{background:var(--background);color:var(--text);overflow:hidden;height:100vh
 /* Estilo para botones deshabilitados */
 .tab-btn.disabled, .dropdown-item.disabled{opacity:0.45;pointer-events:none}
 
-.right-controls{display:flex;align-items:center;gap:8px;flex-shrink:0;padding-left:8px;border-left:1px solid rgba(0,247,255,.2);}
+.right-controls{display:flex;align-items:center;gap:8px;flex-shrink:0;padding-left:8px;border-left:1px solid rgba(0,247,255,.2);position:absolute;top:8px;right:12px}
 
 .dropdown{position:relative;white-space:nowrap}
 
@@ -54,12 +57,17 @@ body{background:var(--background);color:var(--text);overflow:hidden;height:100vh
 
 .dropdown-toggle:active{transform:scale(0.95)}
 
-.dropdown-menu{position:absolute;top:calc(100% + 4px);right:0;background:rgba(26,26,46,.98);border:1px solid rgba(0,247,255,.3);border-radius:8px;min-width:200px;box-shadow:0 12px 28px rgba(0,0,0,.4),inset 0 0 1px rgba(0,247,255,.1);padding:6px;display:none;z-index:201;backdrop-filter:blur(8px)}
+.dropdown-menu{position:absolute;top:calc(100% + 4px);right:0;background:rgba(26,26,46,.98);border:1px solid rgba(0,247,255,.3);border-radius:8px;min-width:200px;box-shadow:0 12px 28px rgba(0,0,0,.4),inset 0 0 1px rgba(0,247,255,.1);padding:6px;display:none;z-index:9999;backdrop-filter:blur(8px)}
 
 .dropdown-menu.show{display:block;animation:slideDown .15s ease}
 
-/* Asegurar que los menus de análisis se muestren correctamente */
-.nav-group .dropdown-menu{right:auto;left:0}
+/* Menús en nav-group usan position fixed para evitar overflow del canvas */
+.nav-group .dropdown-menu{position:fixed;right:auto;left:0;top:auto;margin-top:4px}
+
+/* Dropdowns en right-controls */
+.right-controls .dropdown-menu{position:fixed;top:auto;bottom:auto;flex-direction:row;min-width:auto;width:auto}
+
+.right-controls .dropdown-menu .dropdown-row{flex-direction:row;gap:8px}
 
 .dropdown-item{width:100%;text-align:left;background:transparent;border:none;color:var(--text);padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;transition:all .15s ease}
 
@@ -89,7 +97,7 @@ body{background:var(--background);color:var(--text);overflow:hidden;height:100vh
 
 .dropdown-row input[type=color]:hover{border-color:var(--primary);box-shadow:0 0 8px rgba(0,247,255,.2)}
 .container{display:flex;height:100vh}
-#canvas{flex-grow:1;background:linear-gradient(135deg,var(--background),#0f0f1a);cursor:crosshair;position:relative;overflow:hidden;padding-top:72px}
+#canvas{flex-grow:1;background:linear-gradient(135deg,var(--background),#0f0f1a);cursor:crosshair;position:relative;overflow:hidden;padding-top:120px}
 .grid{position:absolute;top:0;left:0;right:0;bottom:0;background-image:linear-gradient(to right,rgba(0,247,255,.05) 1px,transparent 1px),linear-gradient(to bottom,rgba(0,247,255,.05) 1px,transparent 1px);background-size:20px 20px;pointer-events:none}
 .menu{position:absolute;top:120px;left:20px;z-index:100}
 .menu-toggle{background:rgba(26,26,46,.8);border:1px solid var(--primary);color:var(--primary);padding:10px 15px;border-radius:5px;cursor:pointer;font-size:16px;box-shadow:0 0 10px rgba(0,247,255,.3);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);transition:all .3s ease}
@@ -128,6 +136,8 @@ body{background:var(--background);color:var(--text);overflow:hidden;height:100vh
 .matrix-table th,.matrix-table td{border:1px solid var(--primary);padding:10px;text-align:center;min-width:50px;font-size:14px}
 .matrix-table th{background:rgba(0,247,255,.2);color:var(--primary);font-weight:bold}
 .matrix-input{width:50px;background:rgba(10,10,15,.7);border:1px solid var(--primary);color:var(--text);text-align:center;padding:5px;border-radius:5px;font-size:14px}
+/* Regla para permitir que modales hidden se muestren con style.display */
+#helpModal.hidden[style*="display: block"], #helpModal[style*="display: block"]{display:block !important}
 .help-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,10,15,.95);z-index:2000;overflow:auto;padding:20px}
 .help-content{background:rgba(26,26,46,.9);border:1px solid var(--primary);border-radius:10px;padding:30px;margin:40px auto;max-width:800px;box-shadow:0 0 30px rgba(0,247,255,.5);color:var(--text)}
 .help-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
@@ -1961,9 +1971,15 @@ body{background:var(--background);color:var(--text);overflow:hidden;height:100vh
     width: 100%;
     height: 100%;
     background: rgba(10, 10, 15, 0.95);
-    z-index: 2000;
+    z-index: 9998;
     overflow: auto;
     padding: 20px;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal[style*="display: flex"] {
+    display: flex !important;
 }
 
 .modal-content {
@@ -1971,10 +1987,12 @@ body{background:var(--background);color:var(--text);overflow:hidden;height:100vh
     border: 2px solid var(--primary);
     border-radius: 10px;
     padding: 0;
-    margin: 40px auto;
+    margin: auto;
     max-width: 600px;
     box-shadow: 0 0 30px rgba(0, 247, 255, 0.5);
     color: var(--text);
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-header {
